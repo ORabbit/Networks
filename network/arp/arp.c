@@ -12,7 +12,7 @@ struct arp {
 }
 
 struct arpTable {
-	struct arp arr[];
+	struct arp arr[]; /* Using a array instead of linked-list because of infrequent deletions and set size */
 	int size;
 }
 
@@ -31,11 +31,14 @@ command arp(int type, int nargs, uchar *args)
 
 	if (!isDaemonRunning)
 		ready(create((void *)arpDaemon, INITSTK, 3, "ARPDAEMON", 0), 1);
+
+	wait(arpSem);
 	
 	if (type == 1) { //Display current arp table
 		printf("IP ADDRESS\tMAC ADDRESS\n");
-		for (i = 0; i < arpTab->size; i++) 
+		for (i = 0; i < arpTab->size; i++) {
 			printf("%s\t%s\n", arpTab->arr[i]->arpIp, arpTab->arr[i]->arpMac);
+		}
 	}else if (type == 2) { //Request new arp mapping
 		arpTab->arr[size]->arpMac = malloc(sizeof(uchar)*6);
 		arpTab->arr[size]->arpIp = malloc(sizeof(uchar)*4);
@@ -63,6 +66,8 @@ command arp(int type, int nargs, uchar *args)
 	}else { //Incorrect input
 		printf("ERROR: Invalid input\n");
 	}
+	
+	signal(arpSem);
 			
 }
 
@@ -88,5 +93,14 @@ void arpDaemon(void)
  */
 devcall arpResolve(uchar *ipaddr, uchar *mac)
 {
+	int i;
+
+	// Check to see if the ip address is already mapped
+	for (i = 0; i < arpTab->size; i++) {
+		if (memcmp(arpTab->arr[i]->arpIp, ipaddr, sizeof(ipaddr) == 0)
+			return arpTab->arr[i]->arpMac;
+	}
+
 	
+
 }
