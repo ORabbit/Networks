@@ -100,6 +100,16 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 		if (memcmp(arpTab->arr[i]->arpIp, ipaddr, sizeof(ipaddr) == 0)
 			return arpTab->arr[i]->arpMac;
 	}
+	//if not already mapped find it
+	struct arpPkt *arppkt=malloc(sizeof(struct arppkt));
+	device* devptr;
+
+	etherControl(devptr,ETH_CTRL_GET_MAC, (long)arpPkt->hwtype,0);
+	arpPkt->prtype = ETYPE_ARP;
+	arpPkt->hwalen = ETH_ADDR_LEN;
+	arpPkt->pralen = IPv4_ADDR_LEN;
+	arpPkt->op = hs2net(ARP_OP_RQST);
+	
 
 	
 
