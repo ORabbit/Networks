@@ -102,6 +102,7 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	}
 	//if not already mapped find it
 	struct arpPkt *arppkt=malloc(sizeof(struct arppkt));
+	struct ethPck
 	device* devptr;
 
 	etherControl(devptr,ETH_CTRL_GET_MAC, (long)arpPkt->hwtype,0);
