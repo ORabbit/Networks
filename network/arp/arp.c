@@ -205,16 +205,15 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	/* Attempting to receive an ARP response */
 	printf("arpResolve sizeof(packet):%d and eg:%d\n", sizeof(packet), sizeof(eg));
 	ready(create((void *)arpResolveHelper, INITSTK, 2, "ARP_HELPER", 2, packet,currpid), 1);
-	msg = receive(); /* Wait until helper function has made 3 attempts to arpResolve */
+	recvMacAddress(mac); /* Wait until helper function has made 3 attempts to arpResolve */
 
-	if (msg == TIMEOUT)
-		return SYSERR;
-	else
-	{
-		mac = (uchar *) msg;
-		
+	//if (msg == TIMEOUT)
+	//	return SYSERR;
+	//else
+	//{
+		//mac = (uchar *) msg;
 		return OK;
-	}
+	//}
 }
 
 void arpResolveHelper(uchar *packet, int prevId)
@@ -249,7 +248,8 @@ printf("arpPkt->dpa: %u.%u.%u.%u\n",((struct arpPkt *)((struct ethergram *)packe
 	}
 
 	printf("ArpResolveHelper:%02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-	send(prevId, msg);
+	//send(prevId, msg);
+	sendMacAddress(prevId, mac);
 }
 
 void sendMacAddress(int pid, uchar* mac){
