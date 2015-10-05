@@ -25,7 +25,7 @@ semaphore arpSem;
  * Shell command arp that can be used to display the current table, to
  * request a new mapping, or to eliminate an existing mapping.
  */
-command arp(int type, int nargs, uchar *args)
+command arp(int type, uchar *ip)
 {
 	int i, j;
 
@@ -42,19 +42,19 @@ command arp(int type, int nargs, uchar *args)
 		arpTab.arr[size].arpMac = malloc(sizeof(uchar)*6);
 		arpTab.arr[size].arpIp = malloc(sizeof(uchar)*4);
 
-		if (SYSERR == arpResolve(&args[0], arpTab.arr[size].arpMac)) {
+		if (SYSERR == arpResolve(ip, arpTab.arr[size].arpMac)) {
 			printf("ERROR: Could not resolve the IP address\n");
 			free(arpTab.arr[size].arpMac);
 			free(arpTab.arr[size].arpIp);
 		}
 		else {
 			printf("Resulting MAC address: %s\n", arpTab.arr[size].arpMac);
-			arpTab.arr[size].arpIp = &args[0];
+			arpTab.arr[size].arpIp = ip;
 			arpTab.size++;
 		}
 	}else if (type == 3) { //Eliminate an existing mapping
 		for (i = 0; i < arpTab.size; i++) {
-			if (memcmp(arpTab.arr[i].arpIp, &args[0], sizeof(&args[0])) == 0) {
+			if (memcmp(arpTab.arr[i].arpIp, ip, sizeof(ip)) == 0) {
 				for (j = i; j < arpTab.size-1; j++)
 					arpTab.arr[j] = arpTab.arr[j+1];
 				free(arpTab.arr[size].arpMac);
@@ -93,13 +93,13 @@ void arpDaemon(void)
 
 	while (1)
 	{
-		bzero(packet PKTSZ);
+		bzero(packet, PKTSZ);
 		read(ETH0, packet, PKTSZ);
 		if (memcmp(eg->dst, mac, sizeof(mac)) != 0) /* Not our packet, drop */
 			continue;
 		arpPkt = (struct arpPkt *)&eg->data[0];
 		if (arpPkt->hwtype != 1 || arpPkt->prtype != ETYPE_ARP
-			 || arpPkt->hwalen != ETH_ADDR_LEN || arpPkt->pralen != IPv4_ADDR_LE)
+			 || arpPkt->hwalen != ETH_ADDR_LEN || arpPkt->pralen != IPv4_ADDR_LEN)
 			continue;
 		if (memcmp(mac, &arpPkt->addrs[ARP_ADDR_DHA], sizeof(mac)) != 0
 			|| memcmp(myipaddr, &arpPkt->addrs[ARP_ADDR_DPA], sizeof(myipaddr)) != 0)
@@ -111,8 +111,8 @@ void arpDaemon(void)
 			memcpy(eg->src, mac, sizeof(mac));
 			arpPkt->prtype = ETYPE_ARP;
 			arpPkt->op = htons(ARP_OP_REPLY);
-			memcpy(&arpPkt->addrs[ARP_ADDR_DHA], arpPkt->addrs[ARP_ADDR_SHA], ETH_ADDR_LEN);
-			memcpy(&arpPkt->addrs[ARP_ADDR_DPA], arpPkt->addrs[ARP_ADDR_SPA], IPv4_ADDR_LEN);
+			memcpy(&arpPkt->addrs[ARP_ADDR_DHA], &arpPkt->addrs[ARP_ADDR_SHA], ETH_ADDR_LEN);
+			memcpy(&arpPkt->addrs[ARP_ADDR_DPA], &arpPkt->addrs[ARP_ADDR_SPA], IPv4_ADDR_LEN);
 			memcpy(&arpPkt->addrs[ARP_ADDR_SHA], mac, ETH_ADDR_LEN);
 			memcpy(&arpPkt->addrs[ARP_ADDR_SPA], myipaddr, IPv4_ADDR_LEN);
 			write(ETH0, packet, PKTSZ);
@@ -121,7 +121,7 @@ void arpDaemon(void)
 			pid = recvtime(CLKTICKS_PER_SEC);
 			if (pid == TIMEOUT)
 				continue;
-			send(pid, &arpPkt->addrs[ARP_ADDR_SPA]);
+			send(pid, (message)arpPkt->addrs[ARP_ADDR_SHA]);
 		}else /* Some other op type, drop */
 			continue;
 	}
@@ -182,7 +182,7 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	//put arpPckt in ethernet frame
 	memcpy(&eg->data[0], arpPkt,sizeof(struct arpPkt));
 
-	getpid();
+	//getpid();
 	/* Attempting to receive an ARP response */
 	ready(create((void *)arpResolveHelper, INITSTK, 2, "ARP_HELPER", 2, packet,currpid), 1);
 	msg = receive(); /* Wait until helper function has made 3 attempts to arpResolve */
@@ -206,7 +206,7 @@ void arpResolveHelper(uchar* packet, int prevId)
 	for (i = 0; i < 3 && msg == TIMEOUT; i++)
 	{
 		write(ETH0, packet,ETHER_SIZE + ETHER_MINPAYLOAD );
-		getpid(); //check syscall
+		//getpid(); //check syscall
 		send(arpDaemonId, currpid);
 		msg = recvtime(CLKTICKS_PER_SEC);
 	}

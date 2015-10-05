@@ -28,7 +28,7 @@ struct arpPkt {
 extern uchar *myipaddr;
 extern int arpDaemonId;
 
-command arp(int, int, uchar *);
+command arp(int, uchar *);
 void arpDaemon(void);
 devcall arpResolve(uchar *, uchar *);
 void arpResolveHelper(uchar *, int);
