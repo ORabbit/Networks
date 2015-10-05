@@ -15,11 +15,25 @@
  */
 command xsh_arp(int nargs, char *args[])
 {
-	uchar *ip = malloc(sizeof(IPv4_ADDR_LEN));
-	ip[0] = 192;
-	ip[1] = 168;
-	ip[2] = 6;
-	ip[3] = 10;
-	arp(2, ip);
+	if (nargs != 2 && nargs != 3) {
+		printf("ERROR: Invalid arguments\narp --display\narp --add <ipAddr>\narp --delete <ipAddr>\n");
+		return SYSERR;
+	}
+
+	uchar *ip = malloc(IPv4_ADDR_LEN);
+	dot2ip(args[2], ip);
+	//printf("%u.%u.%u.%u\n", ip[0],ip[1],ip[2],ip[3]);
+	
+	if (memcmp(args[1], "--display", 9) == 0)
+		arp(ARP_DISPLAY, NULL);
+	else if (memcmp(args[1], "--add", 5) == 0 && sizeof(args[2]) <= 15)
+		arp(ARP_ADD, ip);
+	else if (memcmp(args[1], "--delete", 8) == 0 && sizeof(args[2]) <= 15)
+		arp(ARP_DELETE, ip);
+	else {
+		printf("ERROR\r\n");
+		return SYSERR;
+	}
+
 	return OK;
 }
