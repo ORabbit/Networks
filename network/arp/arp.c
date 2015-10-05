@@ -96,7 +96,9 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 {
 	int i;
 	int msg;
-
+	uchar * packet[PKTSZ];
+	struct ethergram *eg = (struct ethergram*) packet;
+	bzero(packet,PKTSZ);
 	// Check to see if the ip address is already mapped
 	for (i = 0; i < arpTab.size; i++) {
 		if (memcmp(arpTab.arr[i].arpIp, ipaddr, sizeof(ipaddr)) == 0)
@@ -108,23 +110,21 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 
 	//if not already mapped find it
 	struct arpPkt *arpPkt = malloc(sizeof(struct arpPkt));
-	struct ethergram *ethPkt = malloc(sizeof(struct ethergram));
-	device* devptr = NULL;
-
+	bzero(eg->dst,ETH_ADDR_LEN);
+	bzero(eg->src,ETH_ADDR_LEN);
+	bzero(&eg->data[0],sizeof(struct arpPkt));
 	/* Ethernet Destination MAC address set to FF:FF:FF:FF:FF for broadcast */
 	//ethPkt->dst = malloc(ETH_ADDR_LEN);
 	//ethPkt->src = malloc(IPv4_ADDR_LEN);
-	ethPkt->dst[0] = 0xFF;
-	ethPkt->dst[1] = 0xFF;
-	ethPkt->dst[2] = 0xFF;
-	ethPkt->dst[3] = 0xFF;
-	ethPkt->dst[4] = 0xFF;
-	ethPkt->dst[5] = 0xFF;
+	eg->dst[0] = 0xFF;
+	eg->dst[1] = 0xFF;
+	eg->dst[2] = 0xFF;
+	eg->dst[3] = 0xFF;
+	eg->dst[4] = 0xFF;
+	eg->dst[5] = 0xFF;
 
-	control(ETH0, ETH_CTRL_GET_MAC, (long)ethPkt->src, 0);
-	ethPkt->type = ETYPE_ARP;
-	//ethPkt->data[0] = &arpPkt;
-	memcpy(ethPkt->data, arpPkt, sizeof(arpPkt));
+	control(ETH0, ETH_CTRL_GET_MAC, (long)eg->src, 0);
+	eg->type = ETYPE_ARP;
 
 	arpPkt->hwtype = 1; // Come back and check for constant or define
 	arpPkt->prtype = ETYPE_ARP;
@@ -132,14 +132,16 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	arpPkt->pralen = IPv4_ADDR_LEN;
 	arpPkt->op = htons(ARP_OP_RQST);
 	
-	control(ETH0, ETH_CTRL_GET_MAC, (long)arpPkt->addrs, 0); // SHA
+	control(ETH0, ETH_CTRL_GET_MAC, (long)&arpPkt->addrs[ARP_ADDR_SHA], 0); // SHA
 	memcpy(&arpPkt->addrs[ARP_ADDR_SPA], myipaddr, arpPkt->pralen); // SPA
 	memcpy(&arpPkt->addrs[ARP_ADDR_DPA], ipaddr, arpPkt->pralen); // DPA
 
+	//put arpPckt in ethernet frame
+	memcpy(&eg->data[0], arpPkt,sizeof(struct arpPkt));
 
 	getpid();
 	/* Attempting to receive an ARP response */
-	ready(create((void *)arpResolveHelper, INITSTK, 2, "ARP_HELPER", 2, ethPkt,currpid), 1);
+	ready(create((void *)arpResolveHelper, INITSTK, 2, "ARP_HELPER", 2, packet,currpid), 1);
 	msg = receive(); /* Wait until helper function has made 3 attempts to arpResolve */
 
 	if (msg == TIMEOUT)
@@ -147,20 +149,20 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	else
 	{
 		mac = (uchar *) msg;
+		
 		return OK;
 	}
 }
 
-void arpResolveHelper(struct ethergram *ethPkt, int prevId)
+void arpResolveHelper(uchar* packet, int prevId)
 {
 	int msg = TIMEOUT;
 	int i;
-	device *devptr = NULL;
 
 	/* Sending ARP Packet */
 	for (i = 0; i < 3 && msg == TIMEOUT; i++)
 	{
-		write(ETH0, ethPkt, (sizeof(struct ethergram) + sizeof(struct arpPkt)));
+		write(ETH0, packet,ETHER_SIZE + ETHER_MINPAYLOAD );
 		getpid(); //check syscall
 		send(arpDaemonId, currpid);
 		msg = recvtime(CLKTICKS_PER_SEC);
