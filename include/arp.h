@@ -31,4 +31,4 @@ extern int arpDaemonId;
 command arp(int, int, uchar *);
 void arpDaemon(void);
 devcall arpResolve(uchar *, uchar *);
-void arpResolveHelper(struct ethergram *, int);
+void arpResolveHelper(uchar *, int);
