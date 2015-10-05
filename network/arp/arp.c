@@ -40,7 +40,7 @@ command arp(int type, uchar *ip)
 	if (type == 1) { //Display current arp table
 		printf("IP ADDRESS\tMAC ADDRESS\n");
 		for (i = 0; i < arpTab.size; i++) {
-			printf("%s\t%s\n", arpTab.arr[i].arpIp, arpTab.arr[i].arpMac);
+			printf("%u.%u.%u.%u\t%02x:%02x:%02x:%02x:%02x:%02x\n", arpTab.arr[i].arpIp[0], arpTab.arr[i].arpIp[1], arpTab.arr[i].arpIp[2], arpTab.arr[i].arpIp[3], arpTab.arr[i].arpMac[0], arpTab.arr[i].arpMac[1], arpTab.arr[i].arpMac[2], arpTab.arr[i].arpMac[3], arpTab.arr[i].arpMac[4], arpTab.arr[i].arpMac[5]);
 		}
 	}else if (type == 2) { //Request new arp mapping
 		arpTab.arr[size].arpMac = malloc(sizeof(uchar)*6);
@@ -52,7 +52,7 @@ command arp(int type, uchar *ip)
 			free(arpTab.arr[size].arpIp);
 		}
 		else {
-			printf("Resulting MAC address: %s\n", arpTab.arr[size].arpMac);
+			printf("Resulting MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", arpTab.arr[size].arpMac[0], arpTab.arr[size].arpMac[1], arpTab.arr[size].arpMac[2], arpTab.arr[size].arpMac[3], arpTab.arr[size].arpMac[4], arpTab.arr[size].arpMac[5]);
 			arpTab.arr[size].arpIp = ip;
 			arpTab.size++;
 		}
@@ -206,6 +206,7 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	printf("arpResolve sizeof(packet):%d and eg:%d\n", sizeof(packet), sizeof(eg));
 	ready(create((void *)arpResolveHelper, INITSTK, 2, "ARP_HELPER", 2, packet,currpid), 1);
 	recvMacAddress(mac); /* Wait until helper function has made 3 attempts to arpResolve */
+	printf("ArpResolve: mac we are getting:%02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
 	//if (msg == TIMEOUT)
 	//	return SYSERR;
