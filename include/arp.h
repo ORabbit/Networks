@@ -9,6 +9,10 @@
 #define ARP_ADDR_DHA ARP_ADDR_SPA + IPv4_ADDR_LEN
 #define ARP_ADDR_DPA ARP_ADDR_DHA + ETH_ADDR_LEN
 
+#define ARP_DISPLAY 1
+#define ARP_ADD 2
+#define ARP_DELETE 3
+
 #define CLKTICKS_PER_SEC 1000 // DOUBLE CHECK
 
 /* ARP packet header */
