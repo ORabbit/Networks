@@ -9,6 +9,7 @@
 
 void sendMacAddress(int, uchar *);
 void recvMacAddress(uchar *);
+void printPacket(uchar *);
 
 struct arp {
 	uchar *arpIp;
@@ -88,24 +89,35 @@ void arpDaemon(void)
 	int pid;
 	struct arpPkt *arpPkt;
 	uchar *mac = malloc(ETH_ADDR_LEN);
+	uchar *brdcast = malloc(ETH_ADDR_LEN);
 	uchar packet[PKTSZ];
 	struct ethergram *eg = (struct ethergram*) packet;
 	bzero(packet, PKTSZ);
 	
 	control(ETH0, ETH_CTRL_GET_MAC, (long)mac, 0);
 
+	brdcast[0] = 0xFF;
+	brdcast[1] = 0xFF;
+	brdcast[2] = 0xFF;
+	brdcast[3] = 0xFF;
+	brdcast[4] = 0xFF;
+	brdcast[5] = 0xFF;
+
 	while (1)
 	{
 		printf("arpDaemon started loop\n");
 		bzero(packet, PKTSZ);
 		read(ETH0, packet, PKTSZ);
-		if (memcmp(eg->dst, mac, sizeof(mac)) != 0) /* Not our packet, drop */
+		printPacket(packet);
+		if (memcmp(eg->dst, mac, sizeof(mac)) != 0 && memcmp(eg->dst, brdcast, sizeof(brdcast)) != 0) /* Not our packet, drop */
 			continue;
 		printf("arpDaemon We received a packet for our mac\n");
 		arpPkt = (struct arpPkt *)&eg->data[0];
+		printf("arpPkt->hwtype=%d arpPkt->prtype=%08x\n", ntohl(arpPkt->hwtype), ntohl(arpPkt->prtype));
 		if (arpPkt->hwtype != 1 || arpPkt->prtype != ETYPE_ARP
 			 || arpPkt->hwalen != ETH_ADDR_LEN || arpPkt->pralen != IPv4_ADDR_LEN)
 			continue;
+		printf("arpDaemon Got past first check\n");
 		if (memcmp(mac, &arpPkt->addrs[ARP_ADDR_DHA], sizeof(mac)) != 0
 			|| memcmp(myipaddr, &arpPkt->addrs[ARP_ADDR_DPA], sizeof(myipaddr)) != 0)
 			continue;
@@ -161,7 +173,7 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	}
 
 	//if not already mapped find it
-	struct arpPkt *arpPkt = malloc(sizeof(struct arpPkt));
+	struct arpPkt *arpPkt = malloc(sizeof(struct arpPkt)+20);
 	bzero(eg->dst,ETH_ADDR_LEN);
 	bzero(eg->src,ETH_ADDR_LEN);
 	bzero(eg->data,sizeof(struct arpPkt)+ETHER_MINPAYLOAD);
@@ -189,7 +201,7 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	memcpy(&arpPkt->addrs[ARP_ADDR_DPA], ipaddr, arpPkt->pralen); // DPA
 
 	//put arpPckt in ethernet frame
-	memcpy(&eg->data[0], arpPkt,sizeof(struct arpPkt));
+	memcpy(&eg->data[0], arpPkt,sizeof(struct arpPkt)+20);
 
 	//getpid();
 	/* Attempting to receive an ARP response */
@@ -231,7 +243,7 @@ printf("arpPkt->sha: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct arpPkt *)((struct
 printf("arpPkt->spa: %u.%u.%u.%u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+3]);
 printf("arpPkt->dha: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+3],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+4]);
 printf("arpPkt->dpa: %u.%u.%u.%u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+3]);
-		write(ETH0, &packet,ETHER_SIZE + ETHER_MINPAYLOAD);
+		write(ETH0, packet,ETHER_SIZE + ETHER_MINPAYLOAD);
 		//getpid(); //check syscall
 		send(arpDaemonId, currpid);
 		//msg = recvtime(CLKTICKS_PER_SEC);
@@ -266,4 +278,19 @@ void recvMacAddress(uchar* mac){
 		index = msgbuff[i] & 0x00FF;
 		mac[index]= (uchar)(msgbuff[i]>>2);		
         }	
+}
+
+void printPacket(uchar *packet) {
+printf("sizeof(packet):%d\neg->src: %02x:%02x:%02x:%02x:%02x:%02x\n", sizeof(packet), ((struct ethergram *)packet)->src[0], ((struct ethergram *)packet)->src[1], ((struct ethergram *)packet)->src[2], ((struct ethergram *)packet)->src[3],((struct ethergram *)packet)->src[4],((struct ethergram *)packet)->src[5]);
+printf("eg->dst: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct ethergram *)packet)->dst[0],((struct ethergram *)packet)->dst[1],((struct ethergram *)packet)->dst[2],((struct ethergram *)packet)->dst[3],((struct ethergram *)packet)->dst[4],((struct ethergram *)packet)->dst[5]);
+printf("eg->data\n");
+printf("arpPkt->hwtype: %u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->hwtype);
+printf("arpPkt->prtype: %08x\n",((struct arpPkt *)((struct ethergram *)packet)->data)->prtype);
+printf("arpPkt->hwalen: %u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->hwalen);
+printf("arpPkt->pralen: %u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->pralen);
+printf("arpPkt->op: %u\n",htons(((struct arpPkt *)((struct ethergram *)packet)->data)->op));
+printf("arpPkt->sha: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+3],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+4]);
+printf("arpPkt->spa: %u.%u.%u.%u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+3]);
+printf("arpPkt->dha: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+3],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+4]);
+printf("arpPkt->dpa: %u.%u.%u.%u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+3]);
 }
