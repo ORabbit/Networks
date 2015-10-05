@@ -31,11 +31,11 @@ uchar packet[PKTSZ];
  */
 command arp(int type, uchar *ip)
 {
-	int i, j;
+	int i, j, size, ret = OK;
 
 	wait(arpSem);
 
-	int size = arpTab.size;
+	size = arpTab.size;
 	
 	if (type == 1) { //Display current arp table
 		printf("IP ADDRESS\tMAC ADDRESS\n");
@@ -43,6 +43,16 @@ command arp(int type, uchar *ip)
 			printf("%u.%u.%u.%u\t%02x:%02x:%02x:%02x:%02x:%02x\n", arpTab.arr[i].arpIp[0], arpTab.arr[i].arpIp[1], arpTab.arr[i].arpIp[2], arpTab.arr[i].arpIp[3], arpTab.arr[i].arpMac[0], arpTab.arr[i].arpMac[1], arpTab.arr[i].arpMac[2], arpTab.arr[i].arpMac[3], arpTab.arr[i].arpMac[4], arpTab.arr[i].arpMac[5]);
 		}
 	}else if (type == 2) { //Request new arp mapping
+		// Check to see if the ip address is already mapped
+		for (i = 0; i < arpTab.size; i++) {
+			if (memcmp(arpTab.arr[i].arpIp, ip, sizeof(ip)) == 0)
+			{
+				printf("Resulting MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", arpTab.arr[i].arpMac[0], arpTab.arr[i].arpMac[1], arpTab.arr[i].arpMac[2], arpTab.arr[i].arpMac[3], arpTab.arr[i].arpMac[4], arpTab.arr[i].arpMac[5]);
+				return OK;
+			}
+		}
+
+		// Attempt to ARP for it
 		arpTab.arr[size].arpMac = malloc(sizeof(uchar)*6);
 		arpTab.arr[size].arpIp = malloc(sizeof(uchar)*4);
 
@@ -50,8 +60,9 @@ command arp(int type, uchar *ip)
 			printf("ERROR: Could not resolve the IP address\n");
 			free(arpTab.arr[size].arpMac);
 			free(arpTab.arr[size].arpIp);
+			ret = SYSERR;
 		}
-		else {
+		else{
 			printf("Resulting MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", arpTab.arr[size].arpMac[0], arpTab.arr[size].arpMac[1], arpTab.arr[size].arpMac[2], arpTab.arr[size].arpMac[3], arpTab.arr[size].arpMac[4], arpTab.arr[size].arpMac[5]);
 			arpTab.arr[size].arpIp = ip;
 			arpTab.size++;
@@ -69,10 +80,11 @@ command arp(int type, uchar *ip)
 		}				
 	}else { //Incorrect input
 		printf("ERROR: Invalid input\n");
+		ret = SYSERR;
 	}
 	
 	signal(arpSem);
-	return SYSERR; // COMEBACK		
+	return ret; // COMEBACK		
 }
 
 /**
@@ -136,7 +148,7 @@ void arpDaemon(void)
 			write(ETH0, packet,ETHER_SIZE+ETHER_MINPAYLOAD);//(uchar*)((struct arpPkt *)((struct ethergram *)packet)->data)-packet);
 		}else if (arpPkt->op == ntohs(ARP_OP_REPLY)) /* ARP Reply */
 		{
-				printf("\narpDaemon Mac address recveived thee mac address %02x:%02x:%02x:%02x:%02x:%02x\n",arpPkt->addrs[ARP_ADDR_SHA],arpPkt->addrs[ARP_ADDR_SHA+1],arpPkt->addrs[ARP_ADDR_SHA+2],arpPkt->addrs[ARP_ADDR_SHA+3],arpPkt->addrs[ARP_ADDR_SHA+4],arpPkt->addrs[ARP_ADDR_SHA+5]);
+			printf("\narpDaemon Mac address recveived thee mac address %02x:%02x:%02x:%02x:%02x:%02x\n",arpPkt->addrs[ARP_ADDR_SHA],arpPkt->addrs[ARP_ADDR_SHA+1],arpPkt->addrs[ARP_ADDR_SHA+2],arpPkt->addrs[ARP_ADDR_SHA+3],arpPkt->addrs[ARP_ADDR_SHA+4],arpPkt->addrs[ARP_ADDR_SHA+5]);
 			pid = recvtime(CLKTICKS_PER_SEC*10);
 			printf("arpDaemon recved succ, sending\n");
 			if (pid == TIMEOUT)
@@ -161,15 +173,7 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	int msg;
 	uchar packet[PKTSZ];
 	struct ethergram *eg = (struct ethergram*) packet;
-	// Check to see if the ip address is already mapped
-	for (i = 0; i < arpTab.size; i++) {
-		if (memcmp(arpTab.arr[i].arpIp, ipaddr, sizeof(ipaddr)) == 0)
-		{
-			mac = arpTab.arr[i].arpMac;
-			return OK;
-		}
-	}
-
+	
 	//if not already mapped find it
 	struct arpPkt *arpPkt = malloc(sizeof(struct arpPkt)+20);
 	bzero(eg->dst,ETH_ADDR_LEN);
