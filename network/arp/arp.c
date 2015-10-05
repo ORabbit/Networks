@@ -7,6 +7,9 @@
 #include <xinu.h>
 #include <arp.h>
 
+void sendMacAddress(int, uchar *);
+void recvMacAddress(uchar *);
+
 struct arp {
 	uchar *arpIp;
 	uchar *arpMac;
@@ -85,7 +88,7 @@ void arpDaemon(void)
 	int pid;
 	struct arpPkt *arpPkt;
 	uchar *mac = malloc(ETH_ADDR_LEN);
-	uchar *packet[PKTSZ];
+	uchar packet[PKTSZ];
 	struct ethergram *eg = (struct ethergram*) packet;
 	bzero(packet, PKTSZ);
 	
@@ -93,10 +96,12 @@ void arpDaemon(void)
 
 	while (1)
 	{
+		printf("arpDaemon started loop\n");
 		bzero(packet, PKTSZ);
 		read(ETH0, packet, PKTSZ);
 		if (memcmp(eg->dst, mac, sizeof(mac)) != 0) /* Not our packet, drop */
 			continue;
+		printf("arpDaemon We received a packet for our mac\n");
 		arpPkt = (struct arpPkt *)&eg->data[0];
 		if (arpPkt->hwtype != 1 || arpPkt->prtype != ETYPE_ARP
 			 || arpPkt->hwalen != ETH_ADDR_LEN || arpPkt->pralen != IPv4_ADDR_LEN)
@@ -104,9 +109,11 @@ void arpDaemon(void)
 		if (memcmp(mac, &arpPkt->addrs[ARP_ADDR_DHA], sizeof(mac)) != 0
 			|| memcmp(myipaddr, &arpPkt->addrs[ARP_ADDR_DPA], sizeof(myipaddr)) != 0)
 			continue;
+		printf("arpDaemon We received a packet for our mac and ip\n");
 
 		if (arpPkt->op != htons(ARP_OP_RQST)) /* ARP Request */
 		{
+			printf("arpDaemon ARP Request recved\n");
 			memcpy(eg->dst, eg->src, sizeof(eg->src));
 			memcpy(eg->src, mac, sizeof(mac));
 			arpPkt->prtype = ETYPE_ARP;
@@ -118,10 +125,12 @@ void arpDaemon(void)
 			write(ETH0, packet, PKTSZ);
 		}else if (arpPkt->op != htons(ARP_OP_REPLY)) /* ARP Reply */
 		{
-			pid = recvtime(CLKTICKS_PER_SEC);
+			printf("arpDaemon recv\n");
+			pid = recvtime(CLKTICKS_PER_SEC*10);
+			printf("arpDaemon recved succ, sending\n");
 			if (pid == TIMEOUT)
 				continue;
-			send(pid, (message)arpPkt->addrs[ARP_ADDR_SHA]);
+			sendMacAddress(pid, &arpPkt->addrs[ARP_ADDR_SHA]);
 		}else /* Some other op type, drop */
 			continue;
 	}
@@ -139,7 +148,7 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 {
 	int i;
 	int msg;
-	uchar * packet[PKTSZ];
+	uchar packet[PKTSZ];
 	struct ethergram *eg = (struct ethergram*) packet;
 	bzero(packet,PKTSZ);
 	// Check to see if the ip address is already mapped
@@ -155,7 +164,7 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	struct arpPkt *arpPkt = malloc(sizeof(struct arpPkt));
 	bzero(eg->dst,ETH_ADDR_LEN);
 	bzero(eg->src,ETH_ADDR_LEN);
-	bzero(&eg->data[0],sizeof(struct arpPkt));
+	bzero(eg->data,sizeof(struct arpPkt)+ETHER_MINPAYLOAD);
 	/* Ethernet Destination MAC address set to FF:FF:FF:FF:FF for broadcast */
 	//ethPkt->dst = malloc(ETH_ADDR_LEN);
 	//ethPkt->src = malloc(IPv4_ADDR_LEN);
@@ -201,16 +210,23 @@ void arpResolveHelper(uchar* packet, int prevId)
 {
 	int msg = TIMEOUT;
 	int i;
+	uchar *mac;
+	uchar *ppkt = packet;	
+
+	mac = malloc(ETH_ADDR_LEN);
 
 	/* Sending ARP Packet */
 	for (i = 0; i < 3 && msg == TIMEOUT; i++)
 	{
-		write(ETH0, packet,ETHER_SIZE + ETHER_MINPAYLOAD );
+		printf("sizeof(packet):%d\n", sizeof(ppkt));
+		write(ETH0, packet,ETHER_SIZE + ETHER_MINPAYLOAD);
 		//getpid(); //check syscall
 		send(arpDaemonId, currpid);
-		msg = recvtime(CLKTICKS_PER_SEC);
+		//msg = recvtime(CLKTICKS_PER_SEC);
+		recvMacAddress(mac);
 	}
 
+	printf("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	send(prevId, msg);
 }
 
@@ -230,6 +246,7 @@ void recvMacAddress(uchar* mac){
 	int index;
 	int i;
 	for(i=0;i<ETH_ADDR_LEN;i++){
+					printf("LOOP: RECV\n");
                 msgbuff[i]=receive();
         }	
 
