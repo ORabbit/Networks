@@ -5,20 +5,20 @@
  */
 
 #include <xinu.h>
+#include <arp.h>
 
 struct arp {
 	uchar *arpIp;
 	uchar *arpMac;
-}
+};
 
 struct arpTable {
-	struct arp arr[]; /* Using a array instead of linked-list because of infrequent deletions and set size */
+	struct arp arr[MAX_ARP_TABLE]; /* Using a array instead of linked-list because of infrequent deletions and set size */
 	int size;
-}
+};
 
 struct arpTable arpTab;
 semaphore arpSem;
-int isDaemonRunning = 0;
 
 
 /**
@@ -29,37 +29,37 @@ command arp(int type, int nargs, uchar *args)
 {
 	int i, j;
 
-	if (!isDaemonRunning)
-		ready(create((void *)arpDaemon, INITSTK, 3, "ARPDAEMON", 0), 1);
-
 	wait(arpSem);
+
+	int size = arpTab.size;
 	
 	if (type == 1) { //Display current arp table
 		printf("IP ADDRESS\tMAC ADDRESS\n");
-		for (i = 0; i < arpTab->size; i++) {
-			printf("%s\t%s\n", arpTab->arr[i]->arpIp, arpTab->arr[i]->arpMac);
+		for (i = 0; i < arpTab.size; i++) {
+			printf("%s\t%s\n", arpTab.arr[i].arpIp, arpTab.arr[i].arpMac);
 		}
 	}else if (type == 2) { //Request new arp mapping
-		arpTab->arr[size]->arpMac = malloc(sizeof(uchar)*6);
-		arpTab->arr[size]->arpIp = malloc(sizeof(uchar)*4);
+		arpTab.arr[size].arpMac = malloc(sizeof(uchar)*6);
+		arpTab.arr[size].arpIp = malloc(sizeof(uchar)*4);
 
-		if (SYSERR == arpResolve(args[0], arpTab->arr[size]->arpMac)) {
+		if (SYSERR == arpResolve(&args[0], arpTab.arr[size].arpMac)) {
 			printf("ERROR: Could not resolve the IP address\n");
-			free(arpTab->arr[size]->arpMac);
-			free(arpTab->arr[size]->arpIp);
+			free(arpTab.arr[size].arpMac);
+			free(arpTab.arr[size].arpIp);
 		}
 		else {
-			printf("Resulting MAC address: %s\n", arpTab->arr[size]->arpMac);
-			arpTab->arr[size]->arpIp = args[0];
-			arpTab->size++;
+			printf("Resulting MAC address: %s\n", arpTab.arr[size].arpMac);
+			arpTab.arr[size].arpIp = &args[0];
+			arpTab.size++;
 		}
 	}else if (type == 3) { //Eliminate an existing mapping
-		for (i = 0; i < arpTab->size; i++) {
-			if (memcmp(arpTab->arr[i]->arpIp, args[0], sizeof(args[0])) == 0) {
-				for (j = i; j < arpTab->size-1; j++)
-					arpTab->arr[j] = arpTab->arr[j+1];
-				free(arpTab->arr[size]);
-				arpTab->size--;
+		for (i = 0; i < arpTab.size; i++) {
+			if (memcmp(arpTab.arr[i].arpIp, &args[0], sizeof(&args[0])) == 0) {
+				for (j = i; j < arpTab.size-1; j++)
+					arpTab.arr[j] = arpTab.arr[j+1];
+				free(arpTab.arr[size].arpMac);
+				free(arpTab.arr[size].arpIp);
+				arpTab.size--;
 				break;
 			}
 		}				
@@ -68,7 +68,7 @@ command arp(int type, int nargs, uchar *args)
 	}
 	
 	signal(arpSem);
-			
+	return SYSERR; // COMEBACK		
 }
 
 /**
@@ -77,9 +77,9 @@ command arp(int type, int nargs, uchar *args)
  */
 void arpDaemon(void)
 {
-	arpTab = malloc(sizeof(struct arpTable));
-	arpTab->arr = malloc(sizeof(struct arp)*30);
-	arpTab->size = 0;
+	//arpTab = malloc(sizeof(struct arpTable));
+	//arpTab.arr = malloc(sizeof(struct arp)*MAX_ARP_TABLE);
+	arpTab.size = 0;
 	arpSem = semcreate(1);
 }
 
@@ -94,24 +94,76 @@ void arpDaemon(void)
 devcall arpResolve(uchar *ipaddr, uchar *mac)
 {
 	int i;
+	int msg;
 
 	// Check to see if the ip address is already mapped
-	for (i = 0; i < arpTab->size; i++) {
-		if (memcmp(arpTab->arr[i]->arpIp, ipaddr, sizeof(ipaddr) == 0)
-			return arpTab->arr[i]->arpMac;
+	for (i = 0; i < arpTab.size; i++) {
+		if (memcmp(arpTab.arr[i].arpIp, ipaddr, sizeof(ipaddr)) == 0)
+		{
+			mac = arpTab.arr[i].arpMac;
+			return OK;
+		}
 	}
-	//if not already mapped find it
-	struct arpPkt *arppkt=malloc(sizeof(struct arppkt));
-	struct ethPck
-	device* devptr;
 
-	etherControl(devptr,ETH_CTRL_GET_MAC, (long)arpPkt->hwtype,0);
+	//if not already mapped find it
+	struct arpPkt *arpPkt = malloc(sizeof(struct arpPkt));
+	struct ethergram *ethPkt = malloc(sizeof(struct ethergram));
+	device* devptr = NULL;
+
+	/* Ethernet Destination MAC address set to FF:FF:FF:FF:FF for broadcast */
+	//ethPkt->dst = malloc(ETH_ADDR_LEN);
+	//ethPkt->src = malloc(IPv4_ADDR_LEN);
+	ethPkt->dst[0] = 0xFF;
+	ethPkt->dst[1] = 0xFF;
+	ethPkt->dst[2] = 0xFF;
+	ethPkt->dst[3] = 0xFF;
+	ethPkt->dst[4] = 0xFF;
+	ethPkt->dst[5] = 0xFF;
+
+	etherControl(devptr, ETH_CTRL_GET_MAC, (long)ethPkt->src, 0);
+	ethPkt->type = ETYPE_ARP;
+	//ethPkt->data[0] = &arpPkt;
+	memcpy(ethPkt->data, arpPkt, sizeof(arpPkt));
+
+	arpPkt->hwtype = 1; // Come back and check for constant or define
 	arpPkt->prtype = ETYPE_ARP;
 	arpPkt->hwalen = ETH_ADDR_LEN;
 	arpPkt->pralen = IPv4_ADDR_LEN;
-	arpPkt->op = hs2net(ARP_OP_RQST);
+	arpPkt->op = htons(ARP_OP_RQST);
 	
+	etherControl(devptr, ETH_CTRL_GET_MAC, (long)arpPkt->addrs, 0); // SHA
+	memcpy(&arpPkt->addrs[ARP_ADDR_SPA], myipaddr, arpPkt->pralen); // SPA
+	memcpy(&arpPkt->addrs[ARP_ADDR_DPA], ipaddr, arpPkt->pralen); // DPA
 
-	
 
+	getpid();
+	/* Attempting to receive an ARP response */
+	ready(create((void *)arpResolveHelper, INITSTK, 2, "ARP_HELPER", 2, ethPkt,currpid), 1);
+	msg = receive(); /* Wait until helper function has made 3 attempts to arpResolve */
+
+	if (msg == TIMEOUT)
+		return SYSERR;
+	else
+	{
+		mac = (uchar *) msg;
+		return OK;
+	}
+}
+
+void arpResolveHelper(struct ethergram *ethPkt, int prevId)
+{
+	int msg = TIMEOUT;
+	int i;
+	device *devptr = NULL;
+
+	/* Sending ARP Packet */
+	for (i = 0; i < 3 && msg == TIMEOUT; i++)
+	{
+		etherWrite(devptr, ethPkt, (sizeof(struct ethergram) + sizeof(struct arpPkt)));
+		getpid(); //check syscall
+		send(arpDaemonId, currpid);
+		msg = recvtime(CLKTICKS_PER_SEC);
+	}
+
+	send(prevId, msg);
 }

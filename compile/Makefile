@@ -17,11 +17,13 @@ $(VERBOSE).SILENT:
 #-----------------------------------------------------------------------
 
 # SHELL
-SHLL = xsh_test.c shell-commands.c
-NET  = netInit.c
+SHLL = xsh_test.c xsh_arp.c shell-commands.c
+NET  = netInit.c 
+ARP = arp.c
 
 SRC =	${SHLL:%.c=../shell/%.c} \
-		${NET:%.c=../network/%.c}
+		${NET:%.c=../network/%.c} \
+		${ARP:%.c=../network/arp/%.c}
 
 KRNOBJ = ${SRC:%.c=%.o}
 
