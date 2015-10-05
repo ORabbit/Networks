@@ -92,7 +92,7 @@ void arpDaemon(void)
 	uchar *brdcast = malloc(ETH_ADDR_LEN);
 
 	struct ethergram *eg = (struct ethergram*) packet;
-	bzero(packet, PKTSZ);
+	//bzero(packet, PKTSZ);
 	
 	control(ETH0, ETH_CTRL_GET_MAC, (long)mac, 0);
 
@@ -108,7 +108,7 @@ void arpDaemon(void)
 		printf("arpDaemon started loop\n");
 		//bzero(packet, PKTSZ);
 		read(ETH0, packet, PKTSZ);
-		printPacket(packet);
+//		printPacket(packet);
 		if (memcmp(eg->dst, mac, sizeof(mac)) != 0 && memcmp(eg->dst, brdcast, sizeof(brdcast)) != 0) /* Not our packet, drop */
 			continue;
 		printf("arpDaemon We received a packet for our mac\n");
@@ -124,7 +124,7 @@ void arpDaemon(void)
 
 		if (arpPkt->op == ntohs(ARP_OP_RQST)) /* ARP Request */
 		{
-			printf("arpDaemon ARP Request recved\n");
+			printf("arpDaemon ARP Request recveid\n");
 			memcpy(eg->dst, eg->src, sizeof(eg->src));
 			memcpy(eg->src, mac, sizeof(mac));
 			arpPkt->prtype = ETYPE_IPv4;
@@ -159,7 +159,7 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 {
 	int i;
 	int msg;
-//	uchar packet[PKTSZ];
+	uchar packet[PKTSZ];
 	struct ethergram *eg = (struct ethergram*) packet;
 	// Check to see if the ip address is already mapped
 	for (i = 0; i < arpTab.size; i++) {
@@ -248,33 +248,36 @@ printf("arpPkt->dpa: %u.%u.%u.%u\n",((struct arpPkt *)((struct ethergram *)packe
 		recvMacAddress(mac);
 	}
 
-	printf("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	printf("ArpResolveHelper:%02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	send(prevId, msg);
 }
 
 void sendMacAddress(int pid, uchar* mac){
 	int macFrame; 
 	int i;
+	printf("ArpDaemon(sendMacAddres): mac we are sending:%02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	for(i=0;i<ETH_ADDR_LEN;i++){
 		macFrame = 0;
 		macFrame+=mac[i];
-		macFrame<<=2;
+		macFrame<<=(2*8);
 		macFrame+=i;
 		send(pid,macFrame);
+		kprintf("sent macFrame:%04x\r\n",macFrame);
 	}
 }
 void recvMacAddress(uchar* mac){
 	int msgbuff[ETH_ADDR_LEN];
 	int index;
 	int i;
+	bzero(msgbuff,ETH_ADDR_LEN);
 	for(i=0;i<ETH_ADDR_LEN;i++){
-					printf("LOOP: RECV\n");
                 msgbuff[i]=receive();
+		kprintf("LOOP: RECV macFrame:%02x, pos:%u\r\n",msgbuff[i]>>(2*8),msgbuff[i]&0x00FF);
         }	
 
 	for(i=0;i<ETH_ADDR_LEN;i++){
 		index = msgbuff[i] & 0x00FF;
-		mac[index]= (uchar)(msgbuff[i]>>2);		
+		mac[index]= (uchar)(msgbuff[i]>>(2*8));		
         }	
 }
 
