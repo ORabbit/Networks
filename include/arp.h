@@ -1,6 +1,7 @@
 
 
 #define ARP_OP_RQST 1
+#define ARP_OP_REPLY 2
 
 #define MAX_ARP_TABLE 30
 #define ARP_ADDR_SHA 0

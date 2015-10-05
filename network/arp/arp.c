@@ -81,7 +81,50 @@ void arpDaemon(void)
 	//arpTab.arr = malloc(sizeof(struct arp)*MAX_ARP_TABLE);
 	arpTab.size = 0;
 	arpSem = semcreate(1);
+	
+	int pid;
+	struct arpPkt *arpPkt;
+	uchar *mac = malloc(ETH_ADDR_LEN);
+	uchar *packet[PKTSZ];
+	struct ethergram *eg = (struct ethergram*) packet;
+	bzero(packet, PKTSZ);
+	
+	control(ETH0, ETH_CTRL_GET_MAC, (long)mac, 0);
 
+	while (1)
+	{
+		bzero(packet PKTSZ);
+		read(ETH0, packet, PKTSZ);
+		if (memcmp(eg->dst, mac, sizeof(mac)) != 0) /* Not our packet, drop */
+			continue;
+		arpPkt = (struct arpPkt *)&eg->data[0];
+		if (arpPkt->hwtype != 1 || arpPkt->prtype != ETYPE_ARP
+			 || arpPkt->hwalen != ETH_ADDR_LEN || arpPkt->pralen != IPv4_ADDR_LE)
+			continue;
+		if (memcmp(mac, &arpPkt->addrs[ARP_ADDR_DHA], sizeof(mac)) != 0
+			|| memcmp(myipaddr, &arpPkt->addrs[ARP_ADDR_DPA], sizeof(myipaddr)) != 0)
+			continue;
+
+		if (arpPkt->op != htons(ARP_OP_RQST)) /* ARP Request */
+		{
+			memcpy(eg->dst, eg->src, sizeof(eg->src));
+			memcpy(eg->src, mac, sizeof(mac));
+			arpPkt->prtype = ETYPE_ARP;
+			arpPkt->op = htons(ARP_OP_REPLY);
+			memcpy(&arpPkt->addrs[ARP_ADDR_DHA], arpPkt->addrs[ARP_ADDR_SHA], ETH_ADDR_LEN);
+			memcpy(&arpPkt->addrs[ARP_ADDR_DPA], arpPkt->addrs[ARP_ADDR_SPA], IPv4_ADDR_LEN);
+			memcpy(&arpPkt->addrs[ARP_ADDR_SHA], mac, ETH_ADDR_LEN);
+			memcpy(&arpPkt->addrs[ARP_ADDR_SPA], myipaddr, IPv4_ADDR_LEN);
+			write(ETH0, packet, PKTSZ);
+		}else if (arpPkt->op != htons(ARP_OP_REPLY)) /* ARP Reply */
+		{
+			pid = recvtime(CLKTICKS_PER_SEC);
+			if (pid == TIMEOUT)
+				continue;
+			send(pid, &arpPkt->addrs[ARP_ADDR_SPA]);
+		}else /* Some other op type, drop */
+			continue;
+	}
 }
 
 /**
