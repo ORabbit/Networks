@@ -213,3 +213,28 @@ void arpResolveHelper(uchar* packet, int prevId)
 
 	send(prevId, msg);
 }
+
+void sendMacAddress(int pid, uchar* mac){
+	int macFrame; 
+	int i;
+	for(i=0;i<ETH_ADDR_LEN;i++){
+		macFrame = 0;
+		macFrame+=mac[i];
+		macFrame<<=2;
+		macFrame+=i;
+		send(pid,macFrame);
+	}
+}
+void recvMacAddress(uchar* mac){
+	int msgbuff[ETH_ADDR_LEN];
+	int index;
+	int i;
+	for(i=0;i<ETH_ADDR_LEN;i++){
+                msgbuff[i]=receive();
+        }	
+
+	for(i=0;i<ETH_ADDR_LEN;i++){
+		index = msgbuff[i] & 0x00FF;
+		mac[index]= (uchar)(msgbuff[i]>>2);		
+        }	
+}
