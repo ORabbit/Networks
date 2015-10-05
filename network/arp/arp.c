@@ -37,17 +37,18 @@ command arp(int type, uchar *ip)
 
 	size = arpTab.size;
 	
-	if (type == 1) { //Display current arp table
+	if (type == ARP_DISPLAY) { //Display current arp table
 		printf("IP ADDRESS\tMAC ADDRESS\n");
 		for (i = 0; i < arpTab.size; i++) {
 			printf("%u.%u.%u.%u\t%02x:%02x:%02x:%02x:%02x:%02x\n", arpTab.arr[i].arpIp[0], arpTab.arr[i].arpIp[1], arpTab.arr[i].arpIp[2], arpTab.arr[i].arpIp[3], arpTab.arr[i].arpMac[0], arpTab.arr[i].arpMac[1], arpTab.arr[i].arpMac[2], arpTab.arr[i].arpMac[3], arpTab.arr[i].arpMac[4], arpTab.arr[i].arpMac[5]);
 		}
-	}else if (type == 2) { //Request new arp mapping
+	}else if (type == ARP_ADD) { //Request new arp mapping
 		// Check to see if the ip address is already mapped
 		for (i = 0; i < arpTab.size; i++) {
 			if (memcmp(arpTab.arr[i].arpIp, ip, sizeof(ip)) == 0)
 			{
 				printf("Resulting MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", arpTab.arr[i].arpMac[0], arpTab.arr[i].arpMac[1], arpTab.arr[i].arpMac[2], arpTab.arr[i].arpMac[3], arpTab.arr[i].arpMac[4], arpTab.arr[i].arpMac[5]);
+				signal(arpSem);
 				return OK;
 			}
 		}
@@ -67,7 +68,7 @@ command arp(int type, uchar *ip)
 			arpTab.arr[size].arpIp = ip;
 			arpTab.size++;
 		}
-	}else if (type == 3) { //Eliminate an existing mapping
+	}else if (type == ARP_DELETE) { //Eliminate an existing mapping
 		for (i = 0; i < arpTab.size; i++) {
 			if (memcmp(arpTab.arr[i].arpIp, ip, sizeof(ip)) == 0) {
 				for (j = i; j < arpTab.size-1; j++)
@@ -117,26 +118,26 @@ void arpDaemon(void)
 
 	while (1)
 	{
-		printf("arpDaemon started loop\n");
+		//printf("arpDaemon started loop\n");
 		//bzero(packet, PKTSZ);
 		read(ETH0, packet, PKTSZ);
 //		printPacket(packet);
 		if (memcmp(eg->dst, mac, sizeof(mac)) != 0 && memcmp(eg->dst, brdcast, sizeof(brdcast)) != 0) /* Not our packet, drop */
 			continue;
-		printf("arpDaemon We received a packet for our mac\n");
+		//printf("arpDaemon We received a packet for our mac\n");
 		arpPkt = (struct arpPkt *)&eg->data[0];
-		printf("eg->type=%d arpPkt->hwtype=%d arpPkt->prtype=%08x\n",ntohs(eg->type), ntohs(arpPkt->hwtype), ntohs(arpPkt->prtype));
+		//printf("eg->type=%d arpPkt->hwtype=%d arpPkt->prtype=%08x\n",ntohs(eg->type), ntohs(arpPkt->hwtype), ntohs(arpPkt->prtype));
 		if (ntohs(eg->type)!=ETYPE_ARP||ntohs(arpPkt->hwtype) != 1 || ntohs(arpPkt->prtype) != ETYPE_IPv4
 			 || arpPkt->hwalen != ETH_ADDR_LEN || arpPkt->pralen != IPv4_ADDR_LEN)
 			continue;
-		printf("arpDaemon Got past first check\n");
+		//printf("arpDaemon Got past first check\n");
 		if (memcmp(myipaddr, &arpPkt->addrs[ARP_ADDR_DPA], sizeof(myipaddr)) != 0)
 			continue;
-		printf("arpDaemon We received a packet for our mac and ip\n");
+		//printf("arpDaemon We received a packet for our mac and ip\n");
 
 		if (arpPkt->op == ntohs(ARP_OP_RQST)) /* ARP Request */
 		{
-			printf("arpDaemon ARP Request recveid\n");
+			//printf("arpDaemon ARP Request recveid\n");
 			memcpy(eg->dst, eg->src, sizeof(eg->src));
 			memcpy(eg->src, mac, sizeof(mac));
 			arpPkt->prtype = ETYPE_IPv4;
@@ -148,9 +149,9 @@ void arpDaemon(void)
 			write(ETH0, packet,ETHER_SIZE+ETHER_MINPAYLOAD);//(uchar*)((struct arpPkt *)((struct ethergram *)packet)->data)-packet);
 		}else if (arpPkt->op == ntohs(ARP_OP_REPLY)) /* ARP Reply */
 		{
-			printf("\narpDaemon Mac address recveived thee mac address %02x:%02x:%02x:%02x:%02x:%02x\n",arpPkt->addrs[ARP_ADDR_SHA],arpPkt->addrs[ARP_ADDR_SHA+1],arpPkt->addrs[ARP_ADDR_SHA+2],arpPkt->addrs[ARP_ADDR_SHA+3],arpPkt->addrs[ARP_ADDR_SHA+4],arpPkt->addrs[ARP_ADDR_SHA+5]);
+			//printf("\narpDaemon Mac address recveived thee mac address %02x:%02x:%02x:%02x:%02x:%02x\n",arpPkt->addrs[ARP_ADDR_SHA],arpPkt->addrs[ARP_ADDR_SHA+1],arpPkt->addrs[ARP_ADDR_SHA+2],arpPkt->addrs[ARP_ADDR_SHA+3],arpPkt->addrs[ARP_ADDR_SHA+4],arpPkt->addrs[ARP_ADDR_SHA+5]);
 			pid = recvtime(CLKTICKS_PER_SEC*10);
-			printf("arpDaemon recved succ, sending\n");
+			//printf("arpDaemon recved succ, sending\n");
 			if (pid == TIMEOUT)
 				continue;
 			sendMacAddress(pid, &arpPkt->addrs[ARP_ADDR_SHA]);
@@ -207,10 +208,10 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 
 	//getpid();
 	/* Attempting to receive an ARP response */
-	printf("arpResolve sizeof(packet):%d and eg:%d\n", sizeof(packet), sizeof(eg));
+	//printf("arpResolve sizeof(packet):%d and eg:%d\n", sizeof(packet), sizeof(eg));
 	ready(create((void *)arpResolveHelper, INITSTK, 2, "ARP_HELPER", 2, packet,currpid), 1);
 	recvMacAddress(mac); /* Wait until helper function has made 3 attempts to arpResolve */
-	printf("ArpResolve: mac we are getting:%02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	//printf("ArpResolve: mac we are getting:%02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
 	//if (msg == TIMEOUT)
 	//	return SYSERR;
