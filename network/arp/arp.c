@@ -81,6 +81,7 @@ void arpDaemon(void)
 	//arpTab.arr = malloc(sizeof(struct arp)*MAX_ARP_TABLE);
 	arpTab.size = 0;
 	arpSem = semcreate(1);
+
 }
 
 /**
@@ -120,7 +121,7 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	ethPkt->dst[4] = 0xFF;
 	ethPkt->dst[5] = 0xFF;
 
-	etherControl(devptr, ETH_CTRL_GET_MAC, (long)ethPkt->src, 0);
+	control(ETH0, ETH_CTRL_GET_MAC, (long)ethPkt->src, 0);
 	ethPkt->type = ETYPE_ARP;
 	//ethPkt->data[0] = &arpPkt;
 	memcpy(ethPkt->data, arpPkt, sizeof(arpPkt));
@@ -131,7 +132,7 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	arpPkt->pralen = IPv4_ADDR_LEN;
 	arpPkt->op = htons(ARP_OP_RQST);
 	
-	etherControl(devptr, ETH_CTRL_GET_MAC, (long)arpPkt->addrs, 0); // SHA
+	control(ETH0, ETH_CTRL_GET_MAC, (long)arpPkt->addrs, 0); // SHA
 	memcpy(&arpPkt->addrs[ARP_ADDR_SPA], myipaddr, arpPkt->pralen); // SPA
 	memcpy(&arpPkt->addrs[ARP_ADDR_DPA], ipaddr, arpPkt->pralen); // DPA
 
@@ -159,7 +160,7 @@ void arpResolveHelper(struct ethergram *ethPkt, int prevId)
 	/* Sending ARP Packet */
 	for (i = 0; i < 3 && msg == TIMEOUT; i++)
 	{
-		etherWrite(devptr, ethPkt, (sizeof(struct ethergram) + sizeof(struct arpPkt)));
+		write(ETH0, ethPkt, (sizeof(struct ethergram) + sizeof(struct arpPkt)));
 		getpid(); //check syscall
 		send(arpDaemonId, currpid);
 		msg = recvtime(CLKTICKS_PER_SEC);

@@ -27,12 +27,12 @@ void netInit(void)
 	do {
 		read(ETH0, packet, PKTSZ);
 
-		printf("PktType:%08x\tMAC:%02x:%02x:%02x:%02x:%02x:%u\r\nOURMAC:%02x:%02x:%02x:%02x:%02x:%02x\r\n", ntohs(eg->type), eg->dst[0], eg->dst[1], eg->dst[2], eg->dst[3], eg->dst[4], eg->dst[5], mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+		//printf("PktType:%08x\tMAC:%02x:%02x:%02x:%02x:%02x:%u\r\nOURMAC:%02x:%02x:%02x:%02x:%02x:%02x\r\n", ntohs(eg->type), eg->dst[0], eg->dst[1], eg->dst[2], eg->dst[3], eg->dst[4], eg->dst[5], mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
 	} while(memcmp(eg->dst, mac, sizeof(mac)) != 0);
 	//we found the packet with our ip address. Let's get out ip address
 	struct arpPkt* tmpArpPkt = (struct arpPkt*) &eg->data[0];
 	memcpy(myipaddr, &tmpArpPkt->addrs[ARP_ADDR_DPA], IPv4_ADDR_LEN);
-	printf("IP Address is: %u.%u.%u.%u\r\n", myipaddr[0], myipaddr[1], myipaddr[2], myipaddr[3]);
+	//printf("IP Address is: %u.%u.%u.%u\r\n", myipaddr[0], myipaddr[1], myipaddr[2], myipaddr[3]);
 	ready(arpDaemonId, 1); /* Starts an ARP Daemon for the backend. */
 	return;
 }
