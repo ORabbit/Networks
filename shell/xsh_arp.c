@@ -24,16 +24,16 @@ command xsh_arp(int nargs, char *args[])
 	dot2ip(args[2], ip);
 	//printf("%u.%u.%u.%u\n", ip[0],ip[1],ip[2],ip[3]);
 	
-	if (memcmp(args[1], "--display", 9) == 0)
+	if (memcmp(args[1], "--display", 9) == 0){
 		if (SYSERR == arp(ARP_DISPLAY, NULL))
 			printf("ERROR: Could not display table\n");
-	else if (memcmp(args[1], "--add", 5) == 0 && sizeof(args[2]) <= 15)
+	}else if (memcmp(args[1], "--add", 5) == 0 && sizeof(args[2]) <= 15){
 		if (SYSERR == arp(ARP_ADD, ip))
 			printf("ERROR: Could not add ip: %s\n", args[2]);
-	else if (memcmp(args[1], "--delete", 8) == 0 && sizeof(args[2]) <= 15)
+	}else if (memcmp(args[1], "--delete", 8) == 0 && sizeof(args[2]) <= 15){
 		if (SYSERR == arp(ARP_DELETE, ip))
 			printf("ERROR: Could not delete ip: %s\n", args[2]);
-	else {
+	}else {
 		printf("ERROR\n");
 		return SYSERR;
 	}

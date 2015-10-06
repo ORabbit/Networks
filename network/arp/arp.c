@@ -8,7 +8,7 @@
 #include <arp.h>
 
 void sendMacAddress(int, uchar *);
-void recvMacAddress(uchar *);
+int recvMacAddressTime(uchar *,unsigned int);
 void printPacket(uchar *);
 
 struct arp {
@@ -44,6 +44,7 @@ command arp(int type, uchar *ip)
 		}
 	}else if (type == ARP_ADD) { //Request new arp mapping
 		// Check to see if the ip address is already mapped
+		kprintf("adding\r\n");
 		for (i = 0; i < arpTab.size; i++) {
 			if (memcmp(arpTab.arr[i].arpIp, ip, sizeof(ip)) == 0)
 			{
@@ -206,87 +207,82 @@ devcall arpResolve(uchar *ipaddr, uchar *mac)
 	//put arpPckt in ethernet frame
 	memcpy(&eg->data[0], arpPkt,sizeof(struct arpPkt)+20);
 
-	//getpid();
 	/* Attempting to receive an ARP response */
 	//printf("arpResolve sizeof(packet):%d and eg:%d\n", sizeof(packet), sizeof(eg));
 	ready(create((void *)arpResolveHelper, INITSTK, 2, "ARP_HELPER", 2, packet,currpid), 1);
-	recvMacAddress(mac); /* Wait until helper function has made 3 attempts to arpResolve */
+	if(recvMacAddressTime(mac,0)==SYSERR) return SYSERR; /* Wait until helper function has made 3 attempts to arpResolve */
 	//printf("ArpResolve: mac we are getting:%02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-
-	//if (msg == TIMEOUT)
-	//	return SYSERR;
-	//else
-	//{
-		//mac = (uchar *) msg;
-		return OK;
-	//}
+	return OK;//don't trust the mac you get back
 }
 
 void arpResolveHelper(uchar *packet, int prevId)
 {
-	int msg = TIMEOUT;
+	unsigned int didTimeout=TIMEOUT;
 	int i;
 	uchar *mac;
 	uchar *ppkt = packet;	
-
 	mac = malloc(ETH_ADDR_LEN);
-
+	int err = 0xFFFF;
 	/* Sending ARP Packet */
-	for (i = 0; i < 3 && msg == TIMEOUT; i++)
+	for (i = 0; i < 3 && didTimeout == TIMEOUT; i++)
 	{
-		printf("sizeof(packet):%d\neg->src: %02x:%02x:%02x:%02x:%02x:%02x\n", sizeof(packet), ((struct ethergram *)packet)->src[0], ((struct ethergram *)packet)->src[1], ((struct ethergram *)packet)->src[2], ((struct ethergram *)packet)->src[3],((struct ethergram *)packet)->src[4],((struct ethergram *)packet)->src[5]);
-printf("eg->dst: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct ethergram *)packet)->dst[0],((struct ethergram *)packet)->dst[1],((struct ethergram *)packet)->dst[2],((struct ethergram *)packet)->dst[3],((struct ethergram *)packet)->dst[4],((struct ethergram *)packet)->dst[5]);
-printf("eg->data\n");
-printf("arpPkt->hwtype: %u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->hwtype);
-printf("arpPkt->prtype: %08x\n",((struct arpPkt *)((struct ethergram *)packet)->data)->prtype);
-printf("arpPkt->hwalen: %u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->hwalen);
-printf("arpPkt->pralen: %u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->pralen);
-printf("arpPkt->op: %u\n",htons(((struct arpPkt *)((struct ethergram *)packet)->data)->op));
-printf("arpPkt->sha: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+3],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+4]);
-printf("arpPkt->spa: %u.%u.%u.%u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+3]);
-printf("arpPkt->dha: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+3],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+4]);
-printf("arpPkt->dpa: %u.%u.%u.%u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+3]);
 		write(ETH0, packet,ETHER_SIZE+ETHER_MINPAYLOAD);//(uchar*)((struct arpPkt *)((struct ethergram *)packet)->data)-packet);
-		//getpid(); //check syscall
 		send(arpDaemonId, currpid);
-		//msg = recvtime(CLKTICKS_PER_SEC);
-		recvMacAddress(mac);
-	}
-
-	printf("ArpResolveHelper:%02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-	//send(prevId, msg);
-	sendMacAddress(prevId, mac);
+		didTimeout=recvMacAddressTime(mac,1);
+		 kprintf("(%d) Trying to resolve ip address.\r\n",i+1);
+        }
+	if(didTimeout==TIMEOUT){
+		send(prevId, err);//tell the process the mac is wrong
+		//kprintf("sent error");
+	}else sendMacAddress(prevId, mac);
 }
 
 void sendMacAddress(int pid, uchar* mac){
 	int macFrame; 
 	int i;
-	printf("ArpDaemon(sendMacAddres): mac we are sending:%02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	//printf("ArpDaemon(sendMacAddres): mac we are sending:%02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	for(i=0;i<ETH_ADDR_LEN;i++){
 		macFrame = 0;
 		macFrame+=mac[i];
 		macFrame<<=(2*8);
 		macFrame+=i;
 		send(pid,macFrame);
-		kprintf("sent macFrame:%04x\r\n",macFrame);
+	//	kprintf("sent macFrame:%04x\r\n",macFrame);
 	}
 }
-void recvMacAddress(uchar* mac){
-	int msgbuff[ETH_ADDR_LEN];
-	int index;
-	int i;
-	bzero(msgbuff,ETH_ADDR_LEN);
-	for(i=0;i<ETH_ADDR_LEN;i++){
-                msgbuff[i]=receive();
-		kprintf("LOOP: RECV macFrame:%02x, pos:%u\r\n",msgbuff[i]>>(2*8),msgbuff[i]&0x00FF);
-        }	
-
-	for(i=0;i<ETH_ADDR_LEN;i++){
-		index = msgbuff[i] & 0x00FF;
-		mac[index]= (uchar)(msgbuff[i]>>(2*8));		
-        }	
+int recvMacAddressTime(uchar* mac,unsigned int time){
+        int msgbuff[ETH_ADDR_LEN];
+        int index;
+        int i;
+	int err = 0xFFFF;
+        bzero(msgbuff,ETH_ADDR_LEN);
+        if(time==0){
+                for(i=0;i<ETH_ADDR_LEN;i++){
+                        msgbuff[i]=receive();
+			if(err==msgbuff[i]){
+				return SYSERR;
+			}
+ //                       kprintf("LOOP: RECV macFrame:%02x, pos:%u\r\n",msgbuff[i]>>(2*8),msgbuff[i]&0x00FF);
+                }
+        }else{
+        for(i=0;i<ETH_ADDR_LEN;i++){
+                        msgbuff[i]=recvtime(CLKTICKS_PER_SEC*time);
+                        if(msgbuff[i]==TIMEOUT){
+                                return TIMEOUT;
+                        }
+			if(msgbuff[i]==err){
+				return SYSERR;
+			}
+ //                       kprintf("LOOP: RECV macFrame:%02x, pos:%u\r\n",msgbuff[i]>>(2*8),msgbuff[i]&0x00FF);
+                }
 }
 
+        for(i=0;i<ETH_ADDR_LEN;i++){
+                index = msgbuff[i] & 0x00FF;
+                mac[index]= (uchar)(msgbuff[i]>>(2*8));
+        }
+        return OK;
+}
 void printPacket(uchar *packet) {
 printf("sizeof(packet):%d\neg->src: %02x:%02x:%02x:%02x:%02x:%02x\n", sizeof(packet), ((struct ethergram *)packet)->src[0], ((struct ethergram *)packet)->src[1], ((struct ethergram *)packet)->src[2], ((struct ethergram *)packet)->src[3],((struct ethergram *)packet)->src[4],((struct ethergram *)packet)->src[5]);
 printf("eg->dst: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct ethergram *)packet)->dst[0],((struct ethergram *)packet)->dst[1],((struct ethergram *)packet)->dst[2],((struct ethergram *)packet)->dst[3],((struct ethergram *)packet)->dst[4],((struct ethergram *)packet)->dst[5]);
