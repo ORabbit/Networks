@@ -141,7 +141,8 @@ void arpDaemon(void)
 			//printf("arpDaemon ARP Request recveid\n");
 			memcpy(eg->dst, eg->src, sizeof(eg->src));
 			memcpy(eg->src, mac, sizeof(mac));
-			arpPkt->prtype = ETYPE_IPv4;
+			eg->type = htons(ETYPE_ARP);
+			arpPkt->prtype = htons(ETYPE_IPv4);
 			arpPkt->op = htons(ARP_OP_REPLY);
 			memcpy(&arpPkt->addrs[ARP_ADDR_DHA], &arpPkt->addrs[ARP_ADDR_SHA], ETH_ADDR_LEN);
 			memcpy(&arpPkt->addrs[ARP_ADDR_DPA], &arpPkt->addrs[ARP_ADDR_SPA], IPv4_ADDR_LEN);
