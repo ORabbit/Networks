@@ -14,6 +14,7 @@ void printPacket(uchar *);
 struct arp {
 	uchar *arpIp;
 	uchar *arpMac;
+	ulong timeStamp;
 };
 
 struct arpTable {
@@ -31,7 +32,7 @@ uchar packet[PKTSZ];
  */
 command arp(int type, uchar *ip)
 {
-	int i, j, size, ret = OK;
+	int i, j, size, oldest, ret = OK;
 
 	wait(arpSem);
 
@@ -54,6 +55,16 @@ command arp(int type, uchar *ip)
 			}
 		}
 
+		oldest = 0;
+		if (arpTab.size >= MAX_ARP_TABLE) // Full ARP table, replace oldest
+		{
+			for (i = 1; i < arpTab.size; i++) {
+				if (arpTab.arr[i].timeStamp < arpTab.arr[oldest].timeStamp)
+					oldest = i;
+			}
+			size = oldest;
+		}
+
 		// Attempt to ARP for it
 		arpTab.arr[size].arpMac = malloc(sizeof(uchar)*6);
 		arpTab.arr[size].arpIp = malloc(sizeof(uchar)*4);
@@ -67,7 +78,9 @@ command arp(int type, uchar *ip)
 		else{
 			printf("Resulting MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", arpTab.arr[size].arpMac[0], arpTab.arr[size].arpMac[1], arpTab.arr[size].arpMac[2], arpTab.arr[size].arpMac[3], arpTab.arr[size].arpMac[4], arpTab.arr[size].arpMac[5]);
 			arpTab.arr[size].arpIp = ip;
-			arpTab.size++;
+			arpTab.arr[size].timeStamp = clocktime;
+			if (arpTab.size < MAX_ARP_TABLE)
+				arpTab.size++;
 		}
 	}else if (type == ARP_DELETE) { //Eliminate an existing mapping
 		for (i = 0; i < arpTab.size; i++) {

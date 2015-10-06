@@ -3,7 +3,7 @@
 #define ARP_OP_RQST 1
 #define ARP_OP_REPLY 2
 
-#define MAX_ARP_TABLE 30
+#define MAX_ARP_TABLE 2
 #define ARP_ADDR_SHA 0
 #define ARP_ADDR_SPA ETH_ADDR_LEN
 #define ARP_ADDR_DHA ARP_ADDR_SPA + IPv4_ADDR_LEN
