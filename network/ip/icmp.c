@@ -3,7 +3,7 @@
 #include <icmp.h>
 #include <arp.h>
 
-uchar packet[PKTSZ];
+uchar packetICMP[PKTSZ];
 
 void icmpDaemon(void)
 {
@@ -16,10 +16,10 @@ void icmpDaemon(void)
 	while (1)
 	{
 		//printf("icmpDaemon started loop\n");
-		bzero(packet, PKTSZ);
-		read(ETH0, packet, PKTSZ);
+		bzero(packetICMP, PKTSZ);
+		read(ETH0, packetICMP, PKTSZ);
 //		printPacket(packet);
-		eg = (struct ethergram *)packet;
+		eg = (struct ethergram *)packetICMP;
 		if (memcmp(eg->dst, myMac, sizeof(myMac)) != 0) /* Not our packet, drop */
 			continue;
 		//printf("icmpDaemon We received a packet for our mac\n");
@@ -38,8 +38,6 @@ void icmpDaemon(void)
 			|| htons(ipPkt->chksum) != checksum(ipPkt, sizeof(ipPkt)))
 			continue;
 
-		if (memcmp(myipaddr, &ipPkt->addrs[ARP_ADDR_DPA], sizeof(myipaddr)) != 0)
-			continue;
 		//printf("icmpDaemon We received a packet for our mac and ip\n");
 
 		if (ntohs(icmpPkt->type) == ECHO_REQUEST) /* ECHO Request */
@@ -58,18 +56,18 @@ void icmpDaemon(void)
 			memcpy(&ipPkt->src, myipaddr, IPv4_ADDR_LEN);
 			ipPkt->chksum = htons(checksum(ipPkt, sizeof(ipPkt)));
 
-			write(ETH0, packet,ETHER_SIZE+ETHER_MINPAYLOAD);//(uchar*)((struct arpPkt *)((struct ethergram *)packet)->data)-packet);
+			write(ETH0, packetICMP,ETHER_SIZE+ETHER_MINPAYLOAD);//(uchar*)((struct arpPkt *)((struct ethergram *)packet)->data)-packet);
 		}else if (ntohs(icmpPkt->type) == ECHO_REPLY) /* ECHO Reply */
 		{
-			uchar *data = malloc(sizeof(uchar) * 3);
-			data[0] = sizeof(packet);
+			ushort *data = malloc(sizeof(uchar) * 3);
+			data[0] = sizeof(packetICMP);
 			data[1] = htons(ipPkt->ttl);
 			data[2] = (uchar)CLKTICKS_PER_SEC*10;
-			send((int)(long)data, recvtime(1));
+			send(recvtime(1), (int)(long)data);
 			recvtime(1);
 			free(data);
 		}else /* Some other op type, drop */
 			continue;
 	}
-	free(packet);
+	//free(packet);
 }

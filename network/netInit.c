@@ -7,8 +7,10 @@
 
 #include <xinu.h>
 #include <arp.h>
+#include <icmp.h>
 
 int arpDaemonId;
+int icmpDaemonId;
 uchar* myipaddr;
 /*
  * Initialize network interface.
@@ -23,6 +25,7 @@ void netInit(void)
 
 	open(ETH0);
 	arpDaemonId = create((void *)arpDaemon, INITSTK, 3, "ARP_DAEMON", 0);
+	icmpDaemonId = create((void *)icmpDaemon, INITSTK, 3, "ICMP_DAEMON", 0);
 	//control(ETH0, ETH_CTRL_GET_MAC, (long) mac, 0);
 	//do {
 	//	read(ETH0, packet, PKTSZ);
@@ -37,5 +40,6 @@ void netInit(void)
 printf("IP Address is: %u.%u.%u.%u\r\n", myipaddr[0], myipaddr[1], myipaddr[2], myipaddr[3]);
 
 	ready(arpDaemonId, 1); /* Starts an ARP Daemon for the backend. */
+	ready(icmpDaemonId, 1);
 	return;
 }

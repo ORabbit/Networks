@@ -7,8 +7,10 @@ struct icmpPkt {
 	ushort type;
 	ushort code; 
 	uchar checksum;
-	uchar data[]; //takes ip datagram 
+	char data[1]; //takes ip datagram 
 };
+
+extern int icmpDaemonId;
 
 command ping(uchar *);
 void icmpDaemon(void);
