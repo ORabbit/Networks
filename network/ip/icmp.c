@@ -73,5 +73,3 @@ void icmpDaemon(void)
 	}
 	free(packet);
 }
-
-
