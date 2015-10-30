@@ -8,7 +8,8 @@
 #include <icmp.h>
 #include <arp.h>
 uchar packet[PKTSZ];
-
+void printPacket(uchar *);
+void printAddr(uchar *,ushort){
 /**
  * Shell command arp that can be used to display the current table, to
  * request a new mapping, or to eliminate an existing mapping.
@@ -23,7 +24,6 @@ command ping( uchar *ip)
 	//ethergram
 	struct ethergram * eg= (struct ethergram*) packet;
 	memcpy(eg->dst, mac, ETH_ADDR_LEN); 
-	memcpy(eg->src, mac, ETH_ADDR_LEN); 
 	control(ETH0, ETH_CTRL_GET_MAC, (long)eg->src, 0);
 	eg->type = htons(ETYPE_IPv4);
 
@@ -35,15 +35,15 @@ command ping( uchar *ip)
 	
 	//constructing ip packet
 	struct ipgram *ipPkt = malloc(sizeof(struct ipgram*));
-	ipPkt->ver_ihl = htons(4 + IPv4_MIN_IHL);
+	ipPkt->ver_ihl = htons(IPv4_VERSION + IPv4_MIN_IHL);
 	ipPkt->tos = 0;
 	ipPkt->len = htons(IPv4_HDR_LEN);
 	ipPkt->id = 0;
 	ipPkt->flags_froff = 0;
 	ipPkt->ttl = htons(10);
 	ipPkt->proto = htons(IPv4_PROTO_ICMP);
-	memcpy(ipPkt->src, myipaddr, IPv4_HDR_LEN);
-	memcpy(ipPkt->dst, ip, IPv4_HDR_LEN);
+	memcpy(ipPkt->src, myipaddr, IP_ADDR_LEN);
+	memcpy(ipPkt->dst, ip, IP_ADDR_LEN);
 	
 	ipPkt->chksum = htons( checksum(ipPkt, sizeof(ipPkt)));
 	
@@ -248,19 +248,42 @@ int recvMacAddressTime(uchar* mac,unsigned int time){
         }
         return OK;
 }
+//prints the ethernet frame with the icmp packet and ip packe within
 void printPacket(uchar *packet) {
+printf("--------ETHERNET FRAME----------\n");
 printf("sizeof(packet):%d\neg->src: %02x:%02x:%02x:%02x:%02x:%02x\n", sizeof(packet), ((struct ethergram *)packet)->src[0], ((struct ethergram *)packet)->src[1], ((struct ethergram *)packet)->src[2], ((struct ethergram *)packet)->src[3],((struct ethergram *)packet)->src[4],((struct ethergram *)packet)->src[5]);
 printf("eg->dst: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct ethergram *)packet)->dst[0],((struct ethergram *)packet)->dst[1],((struct ethergram *)packet)->dst[2],((struct ethergram *)packet)->dst[3],((struct ethergram *)packet)->dst[4],((struct ethergram *)packet)->dst[5]);
-
 printf("eg->type:%u\n",((struct ethergram *)packet)->type);
 printf("eg->data\n");
-printf("arpPkt->hwtype: %u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->hwtype);
-printf("arpPkt->prtype: %08x\n",((struct arpPkt *)((struct ethergram *)packet)->data)->prtype);
-printf("arpPkt->hwalen: %u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->hwalen);
-printf("arpPkt->pralen: %u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->pralen);
-printf("arpPkt->op: %u\n",htons(((struct arpPkt *)((struct ethergram *)packet)->data)->op));
-printf("arpPkt->sha: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+3],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SHA+4]);
-printf("arpPkt->spa: %u.%u.%u.%u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_SPA+3]);
-printf("arpPkt->dha: %02x:%02x:%02x:%02x:%02x:%02x\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+3],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DHA+4]);
-printf("arpPkt->dpa: %u.%u.%u.%u\n",((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+1],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+2],((struct arpPkt *)((struct ethergram *)packet)->data)->addrs[ARP_ADDR_DPA+3]);
+
+printf("--------ICMP PACKET----------\n");
+printf("icmpPkt->type: %u\n",((struct icmpPkt *)((struct ethergram *)packet)->data)->type);
+printf("icmpPkt->code: %u\n",((struct icmpPkt *)((struct ethergram *)packet)->data)->code);
+printf("icmpPkt->checksum: %02x\n",((struct icmpPkt *)((struct ethergram *)packet)->data)->checksum);
+printf("icmpPkt->data: %u\n",((struct icmpPkt *)((struct ethergram *)packet)->data)->pralen);
+
+printf("--------IP PACKET-----------\n");
+printf("ipPkt->ver_ihl: %02x\n",((struct ipgram*) ((struct icmpPkt *)((struct ethergram *)packet)->data)->data)->ver_ihl);
+printf("ipPkt->tos: %02x\n",((struct ipgram*) ((struct icmpPkt *)((struct ethergram *)packet)->data)->data)->tos);
+printf("ipPkt->len: %u\n",((struct ipgram*) ((struct icmpPkt *)((struct ethergram *)packet)->data)->data)->len);
+printf("ipPkt->id: %u\n",((struct ipgram*) ((struct icmpPkt *)((struct ethergram *)packet)->data)->data)->id);
+printf("ipPkt->flags_froff: %u\n",((struct ipgram*) ((struct icmpPkt *)((struct ethergram *)packet)->data)->data)->flags_froff);
+printf("ipPkt->ttl: %u\n",((struct ipgram*) ((struct icmpPkt *)((struct ethergram *)packet)->data)->data)->ttl);
+printf("ipPkt->proto: %02x\n",((struct ipgram*) ((struct icmpPkt *)((struct ethergram *)packet)->data)->data)->proto);
+printf("ipPkt->chksum: %u\n",((struct ipgram*) ((struct icmpPkt *)((struct ethergram *)packet)->data)->data)->chksum);
+printf("ipPkt->src: ");
+printAddr(((struct ipgram*) ((struct icmpPkt *)((struct ethergram *)packet)->data)->data)->src,IPv4_ADDR_LEN);
+printf("ipPkt->dst: ");
+printAddr(((struct ipgram*) ((struct icmpPkt *)((struct ethergram *)packet)->data)->data)->dst,IPv4_ADDR_LEN);
+}
+void printAddr(uchar * addr,ushort len){
+	ushort i;
+	for(i=0;i<len;i++){
+		//last uchar to print in addr
+		if(i==len-1){
+			printf("%02x\n",addr[i]);
+		}else{
+			printf("%02x:",addr[i]);
+		}
+	}
 }
