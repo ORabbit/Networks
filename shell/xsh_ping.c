@@ -22,17 +22,22 @@ command xsh_ping(int nargs, char *args[])
 
 	uchar *ip = malloc(IP_ADDR_LEN);
 	dot2ip(args[1], ip);
-	ping(ip);
-
-	send(icmpDaemonId, currpid);
+	int timeStart;
 	int msg, i;
 	ushort *data;
 
-	for (i = 1; /*getc(CONSOLE) == 'd' ||*/ (msg = recvtime(3*CLKTICKS_PER_SEC)) != TIMEOUT; i++) {
-		data = (ushort *)(long)msg;
-		kprintf("%d bytes from %u.%u.%u.%u: icmp_seq=%d ttl=%u time=%u ms\r\n", data[0], ip[0], ip[1], ip[2], ip[3], i, data[1], data[2]);
-		ping(ip);
+	for (i = 1; /*getc(CONSOLE) == 'd' ||*/ 1 ; i++) {
+		if (ping(ip, i) == SYSERR)
+			continue;
+		timeStart = clocktime;
+		sleep(100);
 		send(icmpDaemonId, currpid);
+
+		msg = recvtime(10*CLKTICKS_PER_SEC);
+		if (msg == TIMEOUT)
+			continue;
+		data = (ushort *)(long)msg;
+		kprintf("%d bytes from %u.%u.%u.%u: icmp_seq=%d ttl=%u time=%u ms\r\n", data[0], ip[0], ip[1], ip[2], ip[3], i, data[1], timeStart - clocktime);
 	}
 	kprintf("ping done\r\n");
 	free(ip);

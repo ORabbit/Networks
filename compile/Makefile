@@ -18,7 +18,7 @@ $(VERBOSE).SILENT:
 
 # SHELL
 SHLL = xsh_test.c xsh_arp.c xsh_ping.c shell-commands.c
-NET  = netInit.c 
+NET  = netInit.c netRecv.c
 ARP = arp.c
 IP = ping.c icmp.c
 

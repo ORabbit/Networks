@@ -14,28 +14,29 @@ void printAddr(uchar *,ushort);
 /**
  * pings another ip address
  */
-command ping(uchar *ip)
+command ping(uchar *ip, ushort seq)
 {
 	packetPING = malloc(PKTSZ);
 	uchar *mac = malloc(ETH_ADDR_LEN);
-	kprintf("ip addr dst:");
-	printAddr(ip,IP_ADDR_LEN);
-	kprintf("ip addr src:");
-	
-	printAddr(myipaddr,IP_ADDR_LEN);
+
+	//kprintf("ip addr dst:");
+	//printAddr(ip,IP_ADDR_LEN);
+	//kprintf("ip addr src:");
+	//printAddr(myipaddr,IP_ADDR_LEN);
+
 	if (SYSERR == arpResolve(ip, mac)) {
 		printf("ERROR in ping->arpResolve\n");
 		return SYSERR;
 	}
 
 	bzero(packetPING, PKTSZ);
-	//ethergram
+	//construct ethergram
 	struct ethergram * eg = (struct ethergram*) packetPING;
 	memcpy(eg->dst, mac, ETH_ADDR_LEN); 
 	control(ETH0, ETH_CTRL_GET_MAC, (long)eg->src, 0);
 	eg->type = htons(ETYPE_IPv4);
 
-//construct icmpPkt
+	//construct icmpPkt
 	struct icmpPkt *icmppkt = malloc(sizeof(struct icmpPkt));
 	if(icmppkt==NULL){
                 kprintf("ERROR: couldn't allocate memory for icmp packet\r\n");
@@ -43,10 +44,10 @@ command ping(uchar *ip)
         }
 	icmppkt->type = ECHO_REQUEST;
 	icmppkt->code = 0;
-	icmppkt->id = 0;
-	icmppkt->seq = 0;
+	icmppkt->id = 1;
+	icmppkt->seq = htons(seq);
 	icmppkt->checksum = 0;
-	icmppkt->checksum = checksum((uchar*)icmppkt, ICMP_HDR_LEN);
+	icmppkt->checksum = htons(checksum((uchar*)icmppkt, ICMP_HDR_LEN));
 
 	//constructing ip packet
 	struct ipgram *ipPkt = (struct ipgram*) malloc(sizeof(struct ipgram)+sizeof(struct icmpPkt));
@@ -54,13 +55,13 @@ command ping(uchar *ip)
 		kprintf("ERROR: couldn't allocate memory for ip packet\r\n");
 		return SYSERR;
 	}else{
-		kprintf("ip packet address:%08x: \r\n",ipPkt);
+		//kprintf("ip packet address:%08x: \r\n",ipPkt);
 	}
 	ipPkt->ver_ihl = (uchar)(IPv4_VERSION << 4);
-        ipPkt->ver_ihl += IPv4_HDR_LEN / 4;
+   ipPkt->ver_ihl += IPv4_HDR_LEN / 4;
 	ipPkt->tos = 0;
-	ipPkt->len = IPv4_HDR_LEN+sizeof(struct icmpPkt);
-	ipPkt->id = 0;
+	ipPkt->len = htons(IPv4_HDR_LEN+ICMP_HDR_LEN);
+	ipPkt->id = 1;
 	ipPkt->flags_froff = 0;
 	ipPkt->ttl = (uchar)IPv4_TTL;
 	ipPkt->proto = IPv4_PROTO_ICMP;
@@ -70,15 +71,16 @@ command ping(uchar *ip)
 	memcpy(ipPkt->dst, ip, IP_ADDR_LEN);
 	
 	ipPkt->chksum = 0;
-	ipPkt->chksum = checksum((uchar*)ipPkt, IPv4_HDR_LEN);
+	ipPkt->chksum = htons(checksum((uchar*)ipPkt, IPv4_HDR_LEN));
 
 	bzero(eg->data,sizeof(struct ipgram)+sizeof(struct icmpPkt));
 	bzero(ipPkt->opts,sizeof(icmppkt));
 	memcpy(&ipPkt->opts[0], icmppkt, sizeof(icmppkt));
-	memcpy(&eg->data[0], ipPkt, sizeof(struct ipgram)+sizeof(struct icmpPkt));
+	memcpy(&eg->data[0], ipPkt, ntohs(ipPkt->len));
 	//printPacketICMP(packetPING);
 	//printf("About to write packet to ETH0\n");
-	write(ETH0, packetPING,ETHER_SIZE+ETHER_MINPAYLOAD);
+	ushort size = ETHER_MINPAYLOAD < ntohs(ipPkt->len) ? ntohs(ipPkt->len) : ETHER_MINPAYLOAD;
+	write(ETH0, packetPING,ETHER_SIZE+size);
 
 	//free(packetPING);
 	return OK;

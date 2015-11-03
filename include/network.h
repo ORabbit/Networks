@@ -6,6 +6,10 @@
 
 #include <kernel.h>
 
+/* OUR ADDED MATERIAL */
+void netRecv(int, int);
+/* END OUR ADDED MATERIAL */
+
 /* Little Endian converters */
 # define htons(x) ((((x)>>8) &0xff) | (((x) & 0xff)<<8))
 # define ntohs(x) htons(x)
