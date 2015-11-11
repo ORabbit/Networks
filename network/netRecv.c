@@ -19,12 +19,14 @@ void netRecv(int arpId, int icmpId) {
 
 		switch (ntohs(eg->type)) {
 			case ETYPE_ARP:
-				send(arpId, 1);
-				resched();
+				arpDaemon(pkt);
+				//send(arpId, 1);
+				//resched();
 				break;
 			case ETYPE_IPv4:
-				send(icmpId, 1);
-				resched();
+				icmpDaemon(pkt);
+				//send(icmpId, 1);
+				//resched();
 				break;
 			default:
 				break;

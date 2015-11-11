@@ -22,9 +22,11 @@ void netInit(void)
 	uchar *mac = malloc(ETH_ADDR_LEN);
 
 	open(ETH0);
-	arpDaemonId = create((void *)arpDaemon, INITSTK, 3, "ARP_DAEMON", 0);
-	icmpDaemonId = create((void *)icmpDaemon, INITSTK, 3, "ICMP_DAEMON", 0);
+	//arpDaemonId = create((void *)arpDaemon, INITSTK, 3, "ARP_DAEMON", 0);
+	//icmpDaemonId = create((void *)icmpDaemon, INITSTK, 3, "ICMP_DAEMON", 0);
 	netRecvId = create((void *)netRecv, INITSTK, 3, "NET_RECV_DAEMON", 2, arpDaemonId, icmpDaemonId);
+	arpDaemonId = netRecvId;
+	icmpDaemonId = netRecvId;
 	//control(ETH0, ETH_CTRL_GET_MAC, (long) mac, 0);
 	//do {
 	//	read(ETH0, packet, PKTSZ);
@@ -38,8 +40,8 @@ void netInit(void)
 	dot2ip(nvramGet("lan_ipaddr\0"), myipaddr);
 printf("IP Address is: %u.%u.%u.%u\r\n", myipaddr[0], myipaddr[1], myipaddr[2], myipaddr[3]);
 
-	ready(netRecvId, 0);
-	ready(arpDaemonId, 0); /* Starts an ARP Daemon for the backend. */
-	ready(icmpDaemonId, 1);
+	ready(netRecvId, 1);
+	//ready(arpDaemonId, 0); /* Starts an ARP Daemon for the backend. */
+	//ready(icmpDaemonId, 1);
 	return;
 }

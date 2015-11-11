@@ -3,9 +3,9 @@
 #include <icmp.h>
 #include <arp.h>
 
-uchar packetICMP[PKTSZ];
+//uchar packetICMP[PKTSZ];
 
-void icmpDaemon(void)
+syscall icmpDaemon(uchar packetICMP[])
 {
 	struct ethergram *eg;
 	struct icmpPkt *icmpPkt;
@@ -16,16 +16,16 @@ void icmpDaemon(void)
 	eg = (struct ethergram *)packetICMP;
 	ushort ip_ihl;
 	//kprintf("icmpDaemon started loop\r\n");
-	while (1)
-	{
-		if (receive() != 1)
-			continue;
-		bzero(packetICMP, PKTSZ);
-		read(ETH0, packetICMP, PKTSZ);
+	//while (1)
+	//{
+		//if (receive() != 1)
+			//continue;
+		//bzero(packetICMP, PKTSZ);
+		//read(ETH0, packetICMP, PKTSZ);
 		//printPacketICMP(packetICMP);
 
 		if (memcmp(eg->dst, myMac, sizeof(myMac)) != 0) /* Not our packet, drop */
-			continue;
+			return SYSERR;//continue;
 
 		ipPkt = (struct ipgram *)&eg->data[0];
 
@@ -40,7 +40,7 @@ void icmpDaemon(void)
 //			printPacketICMP(packetICMP);
 //			
 			kprintf("corrupted ipPkt within\r\n");
-			continue;
+			return SYSERR;//continue;
 		}
 	//	kprintf("icmpDaemon Got past first check:(It is an uncorrupted IP packet)\r\n");
 		
@@ -55,7 +55,7 @@ void icmpDaemon(void)
 		kprintf("%u\r\n", lengthOfData);
 		if(checksum((uchar*)icmpPkt, lengthOfData) != 0){ 
 			kprintf("corrupted icmp packet within\r\n ");
-			continue;
+			return SYSERR;//continue;
 		}
 	//	kprintf("icmpDaemon has determined that the icmp packet withing is uncorrupted\r\n");
 
@@ -96,11 +96,16 @@ void icmpDaemon(void)
 			data[0] = ntohs(ipPkt->len)+ETHER_SIZE;
 			data[1] = htons(ipPkt->ttl);
 			//data[2] = (uchar)CLKTICKS_PER_SEC*10;
-			send(recvtime(10*CLKTICKS_PER_SEC), (int)(long)data);
-			recvtime(10*CLKTICKS_PER_SEC);
-			free(data);
+			int pid = recvtime(10*CLKTICKS_PER_SEC);
+			if (pid != TIMEOUT) {
+				send(pid, (int)(long)data);
+				recvtime(10*CLKTICKS_PER_SEC);
+				free(data);
+			}else
+				return SYSERR;
 		}else /* Some other op type, drop */
-			continue;
-	}
+			return SYSERR;//continue;
+	//}
 	//free(packet);
+	return OK;
 }

@@ -24,7 +24,8 @@ struct arpTable {
 
 struct arpTable arpTab;
 semaphore arpSem;
-uchar packet[PKTSZ];
+//uchar packet[PKTSZ];
+int isNotIntialized = 1;
 
 /**
  * Shell command arp that can be used to display the current table, to
@@ -33,6 +34,12 @@ uchar packet[PKTSZ];
 command arp(int type, uchar *ip)
 {
 	int i, j, size, oldest, ret = OK;
+
+	if (isNotIntialized) {
+		arpTab.size = 0;
+		arpSem = semcreate(1);
+		isNotIntialized = 0;
+	}
 
 	wait(arpSem);
 
@@ -106,13 +113,11 @@ command arp(int type, uchar *ip)
  * Replies to ARP requests destined for our router, and handles replies
  * from our router
  */
-void arpDaemon(void)
+syscall arpDaemon(uchar packet[])
 {
-	//arpTab = malloc(sizeof(struct arpTable));
-	//arpTab.arr = malloc(sizeof(struct arp)*MAX_ARP_TABLE);
-	arpTab.size = 0;
-	arpSem = semcreate(1);
-	bzero(packet,PKTSZ);	
+	//arpTab.size = 0;
+	//arpSem = semcreate(1);
+	//bzero(packet,PKTSZ);	
 	int pid;
 	struct arpPkt *arpPkt;
 	uchar *mac = malloc(ETH_ADDR_LEN);
@@ -130,25 +135,25 @@ void arpDaemon(void)
 	brdcast[4] = 0xFF;
 	brdcast[5] = 0xFF;
 
-	while (1)
-	{
+	//while (1)
+	//{
 		//printf("arpDaemon started loop\n");
-		if (receive() != 1)
-			continue;
-		bzero(packet, PKTSZ);
-		read(ETH0, packet, PKTSZ);
+		//if (receive() != 1)
+		//	continue;
+		//bzero(packet, PKTSZ);
+		//read(ETH0, packet, PKTSZ);
 		//printPacket(packet);
 		if (memcmp(eg->dst, mac, sizeof(mac)) != 0 && memcmp(eg->dst, brdcast, sizeof(brdcast)) != 0) /* Not our packet, drop */
-			continue;
+			return SYSERR;//continue;
 		//printf("arpDaemon We received a packet for our mac\n");
 		arpPkt = (struct arpPkt *)&eg->data[0];
 		//printf("eg->type=%d arpPkt->hwtype=%d arpPkt->prtype=%08x\n",ntohs(eg->type), ntohs(arpPkt->hwtype), ntohs(arpPkt->prtype));
 		if (ntohs(eg->type)!=ETYPE_ARP||ntohs(arpPkt->hwtype) != 1 || ntohs(arpPkt->prtype) != ETYPE_IPv4
 			 || arpPkt->hwalen != ETH_ADDR_LEN || arpPkt->pralen != IPv4_ADDR_LEN)
-			continue;
+			return SYSERR;//continue;
 		//printf("arpDaemon Got past first check\n");
 		if (memcmp(myipaddr, &arpPkt->addrs[ARP_ADDR_DPA], sizeof(myipaddr)) != 0)
-			continue;
+			return SYSERR;//continue;
 		//printf("arpDaemon We received a packet for our mac and ip\n");
 
 		if (arpPkt->op == ntohs(ARP_OP_RQST)) /* ARP Request */
@@ -170,11 +175,12 @@ void arpDaemon(void)
 			pid = recvtime(CLKTICKS_PER_SEC*10);
 			//printf("arpDaemon recved succ, sending\n");
 			if (pid == TIMEOUT)
-				continue;
+				return SYSERR;//continue;
 			sendMacAddress(pid, &arpPkt->addrs[ARP_ADDR_SHA]);
 		}else /* Some other op type, drop */
-			continue;
-	}
+			return SYSERR;//continue;
+	//}
+	return OK;
 }
 
 /**

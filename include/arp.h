@@ -33,6 +33,6 @@ extern uchar *myipaddr;
 extern int arpDaemonId;
 
 command arp(int, uchar *);
-void arpDaemon(void);
+syscall arpDaemon(uchar[]);
 devcall arpResolve(uchar *, uchar *);
 void arpResolveHelper(uchar *, int);
