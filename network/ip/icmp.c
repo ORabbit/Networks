@@ -90,7 +90,8 @@ void icmpDaemon(void)
 		}else if (icmpPkt->type == ECHO_REPLY) /* ECHO Reply */
 		{
 			
-//			kprintf("icmpDaemon ECHO Reply recevied\r\n");
+//			kprintf("icmpDaemon ECHO Reply recevied\r\n");	
+			kprintf("GOT A REPLY!\r\n");
 			ushort *data = malloc(sizeof(ushort) * 2);
 			data[0] = ntohs(ipPkt->len)+ETHER_SIZE;
 			data[1] = htons(ipPkt->ttl);

@@ -27,15 +27,21 @@ command xsh_ping(int nargs, char *args[])
 	ushort *data;
 
 	for (i = 1; /*getc(CONSOLE) == 'd' ||*/ 1 ; i++) {
+		kprintf("calling ping\r\n");
 		if (ping(ip, i) == SYSERR)
 			continue;
 		timeStart = clocktime;
-		sleep(100);
+		//sleep(100);
+		kprintf("resched -> xsh_ping\r\n");
+		resched();
 		send(icmpDaemonId, currpid);
-
+		kprintf("sent to icmpDaemonId\r\n");
+		resched();
 		msg = recvtime(10*CLKTICKS_PER_SEC);
+		kprintf("recved from message -> xsh_ping\r\n");
 		if (msg == TIMEOUT)
 			continue;
+		kprintf("No timeout!\r\n");
 		data = (ushort *)(long)msg;
 		kprintf("%d bytes from %u.%u.%u.%u: icmp_seq=%d ttl=%u time=%u ms\r\n", data[0], ip[0], ip[1], ip[2], ip[3], i, data[1], timeStart - clocktime);
 	}

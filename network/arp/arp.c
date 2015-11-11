@@ -137,7 +137,7 @@ void arpDaemon(void)
 			continue;
 		bzero(packet, PKTSZ);
 		read(ETH0, packet, PKTSZ);
-//		printPacket(packet);
+		//printPacket(packet);
 		if (memcmp(eg->dst, mac, sizeof(mac)) != 0 && memcmp(eg->dst, brdcast, sizeof(brdcast)) != 0) /* Not our packet, drop */
 			continue;
 		//printf("arpDaemon We received a packet for our mac\n");
@@ -243,8 +243,8 @@ void arpResolveHelper(uchar *packet, int prevId)
 	for (i = 0; i < 3 && didTimeout == TIMEOUT; i++)
 	{
 		write(ETH0, packet,ETHER_SIZE+ETHER_MINPAYLOAD);//(uchar*)((struct arpPkt *)((struct ethergram *)packet)->data)-packet);
-		sleep(100);
-		//resched();
+		//sleep(10);
+		resched();
 		send(arpDaemonId, currpid);
 		didTimeout=recvMacAddressTime(mac,1);
 		kprintf("(%d) Trying to resolve ip address.\r\n",i+1);
