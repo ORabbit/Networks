@@ -13,6 +13,7 @@
  */
 command ipWrite(uchar *payload, ushort payload_len,uchar ipv4_type, uchar* dst_ip_addr)
 {
+	static uchar id = 0;
 	uchar *mac = malloc(ETH_ADDR_LEN);
 
 	if (macOther != NULL)
@@ -37,7 +38,7 @@ command ipWrite(uchar *payload, ushort payload_len,uchar ipv4_type, uchar* dst_i
 	ipPkt->ver_ihl += (IPv4_HDR_LEN) / 4;
 	ipPkt->tos = 0;
 	ipPkt->len = htons(IPv4_HDR_LEN+payload_len);//IPv4_HDR_LEN+ICMP_HDR_LEN);
-	ipPkt->id = 1;
+	ipPkt->id = ++id;
 	ipPkt->flags_froff = 64;
 	ipPkt->ttl = (uchar)IPv4_TTL;
 	ipPkt->proto = ipv4_type;
@@ -57,5 +58,6 @@ command ipWrite(uchar *payload, ushort payload_len,uchar ipv4_type, uchar* dst_i
 	free(ipPkt);
 	return OK;
 }
+
 
 
