@@ -52,7 +52,7 @@ syscall icmpDaemon(uchar packetICMP[])
 		//icmpPkt->checksum = 0;
 		
 		ushort lengthOfData = ntohs(ipPkt->len)-(ip_ihl*4);
-		kprintf("%u\r\n", lengthOfData);
+		//kprintf("%u\r\n", lengthOfData);
 		if(checksum((uchar*)icmpPkt, lengthOfData) != 0){ 
 			kprintf("corrupted icmp packet within\r\n ");
 			return SYSERR;//continue;
@@ -82,27 +82,32 @@ syscall icmpDaemon(uchar packetICMP[])
 			ipPkt->chksum = 0;
 			ipPkt->chksum = checksum((uchar*)ipPkt, (ip_ihl * 4));
 
-			printf("SENDING BACK:\n");
-			printPacketICMP(packetICMP);
-			kprintf("ipoPkt->len:%u\r\n",htons(ipPkt->len));
+			//printf("SENDING BACK:\n");
+			//printPacketICMP(packetICMP);
+			//kprintf("ipoPkt->len:%u\r\n",htons(ipPkt->len));
 			int size = ETHER_MINPAYLOAD < htons(ipPkt->len) ? htons(ipPkt->len) : ETHER_MINPAYLOAD;
 			write(ETH0, packetICMP,ETHER_SIZE+size);//(uchar*)((struct arpPkt *)((struct ethergram *)packet)->data)-packet);
 		}else if (icmpPkt->type == ECHO_REPLY) /* ECHO Reply */
 		{
 			
 //			kprintf("icmpDaemon ECHO Reply recevied\r\n");	
-			kprintf("GOT A REPLY!\r\n");
+			//kprintf("GOT A REPLY!\r\n");
 			ushort *data = malloc(sizeof(ushort) * 2);
-			data[0] = ntohs(ipPkt->len)+ETHER_SIZE;
-			data[1] = htons(ipPkt->ttl);
+			data[0] = ntohs(ipPkt->len)-(ip_ihl*4);//ntohs(ipPkt->len);
+			data[1] = ipPkt->ttl;
+			//kprintf("MADE IT HERE\r\n");
 			//data[2] = (uchar)CLKTICKS_PER_SEC*10;
 			int pid = recvtime(10*CLKTICKS_PER_SEC);
 			if (pid != TIMEOUT) {
+				//kprintf("NO TIMEOUT IN ICMPDAEMON\r\n");
 				send(pid, (int)(long)data);
-				recvtime(10*CLKTICKS_PER_SEC);
+				//recvtime(10*CLKTICKS_PER_SEC);
+				sleep(10);
 				free(data);
-			}else
+			}else {
+				//kprintf("TIMEOUT IN ICMPDAEMON\r\n");
 				return SYSERR;
+			}
 		}else /* Some other op type, drop */
 			return SYSERR;//continue;
 	//}

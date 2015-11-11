@@ -86,7 +86,7 @@ command ping(uchar *ip, ushort seq)
 	memcpy(&ipPkt->opts[0], icmppkt, ICMP_HDR_LEN+56);
 	memcpy(&eg->data[0], ipPkt, ntohs(ipPkt->len));
 	//printPacketICMP(packetPING);
-	kprintf("About to write packet to ETH0\r\n");
+	//kprintf("About to write packet to ETH0\r\n");
 	ushort size = ETHER_MINPAYLOAD < ntohs(ipPkt->len) ? ntohs(ipPkt->len) : ETHER_MINPAYLOAD;
 	write(ETH0, packetPING,ETHER_SIZE+size);
 
