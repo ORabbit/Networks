@@ -8,8 +8,8 @@
 #include <icmp.h>
 #include <arp.h>
 //uchar packetPING[PKTSZ];
- uchar *packetPING;
-uchar *macOther;
+//uchar *packetPING;
+//uchar *macOther;
 void printAddr(uchar *,ushort);
 
 /**
@@ -17,7 +17,8 @@ void printAddr(uchar *,ushort);
  */
 command ping(uchar *ip, ushort seq)
 {
-	packetPING = malloc(PKTSZ);
+	
+	/*packetPING = malloc(PKTSZ);
 	uchar *mac = malloc(ETH_ADDR_LEN);
 
 	//kprintf("ip addr dst:");
@@ -41,7 +42,7 @@ command ping(uchar *ip, ushort seq)
 	memcpy(eg->dst, mac, ETH_ADDR_LEN); 
 	control(ETH0, ETH_CTRL_GET_MAC, (long)eg->src, 0);
 	eg->type = htons(ETYPE_IPv4);
-
+*/
 	//construct icmpPkt
 	struct icmpPkt *icmppkt = malloc(ICMP_HDR_LEN+56);
 	bzero(icmppkt, ICMP_HDR_LEN+56);
@@ -56,6 +57,10 @@ command ping(uchar *ip, ushort seq)
 	icmppkt->checksum = 0;
 	icmppkt->checksum = checksum((uchar*)icmppkt, ICMP_HDR_LEN+56);
 
+	ipWrite((uchar*)icmppkt, (ushort)(ICMP_HDR_LEN+56), IPv4_PROTO_ICMP, ip);
+	free(icmppkt);
+	return OK;
+/*
 	//constructing ip packet
 	struct ipgram *ipPkt = malloc(IPv4_HDR_LEN+ICMP_HDR_LEN+56);
 	bzero(ipPkt, IPv4_HDR_LEN+ICMP_HDR_LEN+56);
@@ -91,7 +96,7 @@ command ping(uchar *ip, ushort seq)
 	write(ETH0, packetPING,ETHER_SIZE+size);
 
 	//free(packetPING);
-	return OK;
+	return OK;*/
 }
 
 //prints the ethernet frame with the icmp packet and ip packe within

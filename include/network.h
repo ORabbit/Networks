@@ -8,6 +8,8 @@
 
 /* OUR ADDED MATERIAL */
 void netRecv(int, int);
+command ipWrite(uchar*,ushort,ushort,uchar*);
+command netWrite(uchar*,ushort,ushort,uchar*);
 /* END OUR ADDED MATERIAL */
 
 /* Little Endian converters */
