@@ -45,6 +45,7 @@ command ping(uchar *ip, ushort seq)
 */
 	//construct icmpPkt
 	struct icmpPkt *icmppkt = malloc(ICMP_HDR_LEN+56);
+	//struct icmpPkt *icmppkt = malloc(ICMP_HDR_LEN+56);
 	bzero(icmppkt, ICMP_HDR_LEN+56);
 	if(icmppkt==NULL){
                 kprintf("ERROR: couldn't allocate memory for icmp packet\r\n");

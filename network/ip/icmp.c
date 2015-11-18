@@ -42,7 +42,7 @@ syscall icmpDaemon(uchar packetICMP[])
 			kprintf("corrupted ipPkt within\r\n");
 			return SYSERR;//continue;
 		}
-	//	kprintf("icmpDaemon Got past first check:(It is an uncorrupted IP packet)\r\n");
+		//kprintf("icmpDaemon Got past first check:(It is an uncorrupted IP packet)\r\n");
 		
 		icmpPkt = (struct icmpPkt *)&ipPkt->opts[0];
 		//icmpPkt += 2;
@@ -90,20 +90,21 @@ syscall icmpDaemon(uchar packetICMP[])
 		}else if (icmpPkt->type == ECHO_REPLY) /* ECHO Reply */
 		{
 			
-//			kprintf("icmpDaemon ECHO Reply recevied\r\n");	
-			//kprintf("GOT A REPLY!\r\n");
-			ushort *data = malloc(sizeof(ushort) * 2);
-			data[0] = ntohs(ipPkt->len)-(ip_ihl*4);//ntohs(ipPkt->len);
-			data[1] = ipPkt->ttl;
+		//	kprintf("icmpDaemon ECHO Reply recevied\r\n");	
+		//	kprintf("GOT A REPLY!\r\n");
+			//ushort *data = malloc(sizeof(ushort) * 2);
+			//data[0] = ntohs(ipPkt->len)-(ip_ihl*4);//ntohs(ipPkt->len);
+			//data[1] = ipPkt->ttl;
+		//	kprintf("(0)bytes: %d and ttl %d\r\n",data[0],data[1]);
 			//kprintf("MADE IT HERE\r\n");
 			//data[2] = (uchar)CLKTICKS_PER_SEC*10;
 			int pid = recvtime(10*CLKTICKS_PER_SEC);
 			if (pid != TIMEOUT) {
 				//kprintf("NO TIMEOUT IN ICMPDAEMON\r\n");
-				send(pid, (int)(long)data);
+			//	kprintf("(1)bytes: %d and ttl %d\r\n",data[0],data[1]);
+				send(pid, (int)(ntohs(ipPkt->len) - (ip_ihl*4)));
+				send(pid, (int)ipPkt->ttl);
 				//recvtime(10*CLKTICKS_PER_SEC);
-				sleep(10);
-				free(data);
 			}else {
 				//kprintf("TIMEOUT IN ICMPDAEMON\r\n");
 				return SYSERR;

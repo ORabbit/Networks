@@ -33,6 +33,7 @@ command ipWrite(uchar *payload, ushort payload_len,ushort ipv4_type, uchar* dst_
 	int i;
 	for(i=0;i<=fr_grams;i++){
 		//constructing ip packet
+		//kprintf("loop iteration:%d\r\n",i);
 		bzero(ipPkt,ETH_MTU);
 		ipPkt->ver_ihl = (uchar)(IPv4_VERSION << 4);
 		ipPkt->ver_ihl += (IPv4_HDR_LEN) / 4;
@@ -70,7 +71,9 @@ command ipWrite(uchar *payload, ushort payload_len,ushort ipv4_type, uchar* dst_
 		//cleanup
 
 	}	
+//		kprintf("freeing ipPkt\r\n");
 		free(ipPkt);
+//		kprintf("freeing mac\r\n");
 		free(mac);
 		return OK;
 }

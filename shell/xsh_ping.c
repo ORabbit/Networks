@@ -23,7 +23,7 @@ command xsh_ping(int nargs, char *args[])
 	uchar *ip = malloc(IP_ADDR_LEN);
 	dot2ip(args[1], ip);
 	ulong timeStart, timeStartMs;
-	int msg, i, max;
+	int msg1, msg2, i, max;
 	ushort *data;
 
 	max = atoi(args[2]);
@@ -42,17 +42,20 @@ command xsh_ping(int nargs, char *args[])
 		send(icmpDaemonId, currpid);
 		//kprintf("sent to icmpDaemonId\r\n");
 		resched();
-		msg = recvtime(100*CLKTICKS_PER_SEC);
+		msg1 = recvtime(10*CLKTICKS_PER_SEC);
 		//kprintf("recved from message -> xsh_ping\r\n");
-		if (msg == TIMEOUT)
+		if (msg1 == TIMEOUT)
+			continue;
+
+		msg2 = recvtime(10*CLKTICKS_PER_SEC);
+		//kprintf("recved from message -> xsh_ping\r\n");
+		if (msg2 == TIMEOUT)
 			continue;
 		//kprintf("No timeout!\r\n");
-		data = (ushort *)(long)msg;
+		//data = (ushort *)(long)msg;
 		clock_update(platform.time_base_freq / (1000*CLKTICKS_PER_SEC));
-		kprintf("%d bytes from %u.%u.%u.%u: icmp_seq=%d ttl=%u time=%u.%u s\r\n", data[0], ip[0], ip[1], ip[2], ip[3], i, data[1], clocktime - timeStart, ctr_mS - timeStartMs);
+		kprintf("%d bytes from %u.%u.%u.%u: icmp_seq=%d ttl=%d time=%u.%u s\r\n", msg1, ip[0], ip[1], ip[2], ip[3], i, msg2, clocktime - timeStart, ctr_mS - timeStartMs);
 		sleep(1000);
-		//if (kcheckc() && getc(CONSOLE) == 'd')
-		//	break;
 	}
 	kprintf("ping done\r\n");
 	free(ip);

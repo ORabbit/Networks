@@ -29,7 +29,6 @@ command netWrite(uchar *payload, ushort payload_len,ushort e_type, uchar* mac)
 	memcpy(&eg->data[0], payload, payload_len);
 
 
-	kprintf("About to write packet to ETH0\r\n");
 	ushort size = ETHER_MINPAYLOAD < payload_len ? payload_len : ETHER_MINPAYLOAD;
 	write(ETH0, packet,ETHER_SIZE+size);
 
