@@ -8,8 +8,18 @@
 
 /* OUR ADDED MATERIAL */
 void netRecv(int, int);
-command ipWrite(uchar*,ushort,ushort,uchar*);
+command ipWrite(uchar*,ushort,ushort,uchar*,uchar*);
 command netWrite(uchar*,ushort,ushort,uchar*);
+syscall fragmentPacketHelper(uchar*,uchar*);
+ushort getIPpktLen(uchar*);
+void setIPpktId(uchar*,ushort);
+ushort getIPpktId(uchar*);
+void setIPpktLen(uchar*,ushort);
+void calculateIPChcksum(uchar*);
+void calculateICMPChcksum(uchar*,ushort);
+int isFragmentedPacket(uchar*);
+#define MAX_IP_LEN 65535
+#define MAX_ETH_LEN ETH_HEADER_LEN + MAX_IP_LEN
 /* END OUR ADDED MATERIAL */
 
 /* Little Endian converters */

@@ -31,7 +31,7 @@ command xsh_ping(int nargs, char *args[])
 
 	for (i = 1; i <= max; i++) {
 		//kprintf("calling ping\r\n");
-		if (ping(ip, i) == SYSERR)
+		if (ping(ip, i, 56) == SYSERR)
 			continue;
 		clock_update(platform.time_base_freq / (1000*CLKTICKS_PER_SEC));
 		timeStart = clocktime;

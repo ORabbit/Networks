@@ -27,5 +27,5 @@ struct icmpEcho {
 extern int icmpDaemonId;
 
 void printPacketICMP(uchar *);
-command ping(uchar *, ushort);
-syscall icmpDaemon(uchar[]);
+command ping(uchar *, ushort,int);
+syscall icmpDaemon(uchar[], uchar);

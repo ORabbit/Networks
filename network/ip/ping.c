@@ -15,7 +15,7 @@ void printAddr(uchar *,ushort);
 /**
  * pings another ip address
  */
-command ping(uchar *ip, ushort seq)
+command ping(uchar *ip, ushort seq, int junk)
 {
 	
 	/*packetPING = malloc(PKTSZ);
@@ -36,6 +36,7 @@ command ping(uchar *ip, ushort seq)
 		memcpy(macOther, mac, ETH_ADDR_LEN);
 	}
 
+
 	bzero(packetPING, PKTSZ);
 	//construct ethergram
 	struct ethergram * eg = (struct ethergram*) packetPING;
@@ -44,9 +45,9 @@ command ping(uchar *ip, ushort seq)
 	eg->type = htons(ETYPE_IPv4);
 */
 	//construct icmpPkt
-	struct icmpPkt *icmppkt = malloc(ICMP_HDR_LEN+56);
+	struct icmpPkt *icmppkt = malloc(ICMP_HDR_LEN+junk);
 	//struct icmpPkt *icmppkt = malloc(ICMP_HDR_LEN+56);
-	bzero(icmppkt, ICMP_HDR_LEN+56);
+	bzero(icmppkt, ICMP_HDR_LEN+junk);
 	if(icmppkt==NULL){
                 kprintf("ERROR: couldn't allocate memory for icmp packet\r\n");
                 return SYSERR;
@@ -56,9 +57,9 @@ command ping(uchar *ip, ushort seq)
 	icmppkt->id = 1;
 	icmppkt->seq = htons(seq);
 	icmppkt->checksum = 0;
-	icmppkt->checksum = checksum((uchar*)icmppkt, ICMP_HDR_LEN+56);
+	icmppkt->checksum = checksum((uchar*)icmppkt, ICMP_HDR_LEN+junk);
 
-	ipWrite((uchar*)icmppkt, (ushort)(ICMP_HDR_LEN+56), IPv4_PROTO_ICMP, ip);
+	ipWrite((uchar*)icmppkt, (ushort)(ICMP_HDR_LEN+junk), IPv4_PROTO_ICMP, ip,NULL);
 	free(icmppkt);
 	return OK;
 /*

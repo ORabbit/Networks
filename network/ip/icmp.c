@@ -5,7 +5,7 @@
 
 //uchar packetICMP[PKTSZ];
 
-syscall icmpDaemon(uchar packetICMP[])
+syscall icmpDaemon(uchar packetICMP[], uchar wasFragmented)
 {
 	struct ethergram *eg;
 	struct icmpPkt *icmpPkt;
@@ -22,19 +22,22 @@ syscall icmpDaemon(uchar packetICMP[])
 			//continue;
 		//bzero(packetICMP, PKTSZ);
 		//read(ETH0, packetICMP, PKTSZ);
-		//printPacketICMP(packetICMP);
 
-		if (memcmp(eg->dst, myMac, sizeof(myMac)) != 0) /* Not our packet, drop */
-			return SYSERR;//continue;
+	//	printPacketICMP(packetICMP);
 
 		ipPkt = (struct ipgram *)&eg->data[0];
 
 		ip_ihl= ipPkt->ver_ihl & IPv4_IHL;
 		//ushort ipChksum = ntohs(ipPkt->chksum);
 		//ipPkt->chksum = 0;
-		if (ntohs(eg->type)!=ETYPE_IPv4 || ipPkt->proto != IPv4_PROTO_ICMP 
+
+		//not for us
+		if(memcmp(ipPkt->dst,myipaddr,IPv4_ADDR_LEN)!=0) return SYSERR;
+		if(!wasFragmented && (ntohs(ipPkt->len) < (IPv4_MIN_IHL * 4) 	|| (ip_ihl > IPv4_MAX_IHL))) return SYSERR;
+
+		if (ntohs(eg->type)!=ETYPE_IPv4 || ipPkt->proto != IPv4_PROTO_ICMP  
 			|| ((ipPkt->ver_ihl & IPv4_VER) >> 4) != IPv4_VERSION || (ip_ihl < IPv4_MIN_IHL) 
-			|| (ip_ihl > IPv4_MAX_IHL) || ntohs(ipPkt->len) < (IPv4_MIN_IHL * 4)
+		
 			|| checksum((uchar*)ipPkt, (ip_ihl * 4)) != 0){
 			//kprintf("not the packet we were looking for(Test[1]: %d,Test[2]: %d,Test[3]:%d,Test[4]:%d,Test[5]:%d,Test[6]:%d)\r\n.",ntohs(eg->type)==ETYPE_IPv4,ipPkt->proto == IPv4_PROTO_ICMP,((ipPkt->ver_ihl & IPv4_VER) >> 4) == IPv4_VERSION,!(ip_ihl < IPv4_MIN_IHL) && !(ip_ihl > IPv4_MAX_IHL), ntohs(ipPkt->len) >= (IPv4_MIN_IHL * 4), checksum((uchar*)ipPkt, (ip_ihl * 4)) == 0);
 //			printPacketICMP(packetICMP);
@@ -52,6 +55,7 @@ syscall icmpDaemon(uchar packetICMP[])
 		//icmpPkt->checksum = 0;
 		
 		ushort lengthOfData = ntohs(ipPkt->len)-(ip_ihl*4);
+
 		//kprintf("%u\r\n", lengthOfData);
 		if(checksum((uchar*)icmpPkt, lengthOfData) != 0){ 
 			kprintf("corrupted icmp packet within\r\n ");
@@ -86,7 +90,7 @@ syscall icmpDaemon(uchar packetICMP[])
 			//printPacketICMP(packetICMP);
 			//kprintf("ipoPkt->len:%u\r\n",htons(ipPkt->len));
 			int size = ETHER_MINPAYLOAD < htons(ipPkt->len) ? htons(ipPkt->len) : ETHER_MINPAYLOAD;
-			write(ETH0, packetICMP,ETHER_SIZE+size);//(uchar*)((struct arpPkt *)((struct ethergram *)packet)->data)-packet);
+			ipWrite(&ipPkt->opts[0],lengthOfData,IPv4_PROTO_ICMP,ipPkt->dst,eg->dst);//(uchar*)((struct arpPkt *)((struct ethergram *)packet)->data)-packet);
 		}else if (icmpPkt->type == ECHO_REPLY) /* ECHO Reply */
 		{
 			
