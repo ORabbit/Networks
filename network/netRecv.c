@@ -27,26 +27,49 @@ void netRecv(int arpId, int icmpId) {
 				//resched();
 				break;
 			case ETYPE_IPv4:
-				if(!isFragmentedPacket(pkt)&&!lookingForFragment){
-					//kprintf("1st case\r\n");
-					icmpDaemon(pkt,0);
+				//using ICMP protocol
+				if(((struct ipgram*)&eg->data[0])->proto== IPv4_PROTO_ICMP){
+					if(!isFragmentedPacket(pkt)&&!lookingForFragment){
+						//kprintf("1st case\r\n");
+						icmpDaemon(pkt,0);
+					}
+					else if( (ret_val = fragmentPacketHelper(pkt,frag_pkts)) ==0){
+					//	kprintf("2nd case\r\n");
+						lookingForFragment = 0;
+						icmpDaemon(frag_pkts,1);
+						bzero(frag_pkts, MAX_ETH_LEN);
+					}else if(ret_val == 1){
+					//	kprintf("3rd case\r\n");
+						lookingForFragment = 1;
+					}else{ //SYSERR = ret_val ... different datagram or something else
+						
+					//	kprintf("4th case\r\n");
+						bzero(frag_pkts, MAX_ETH_LEN);
+						lookingForFragment = 0;
+						continue;
+					}
+				//using udp protocol
+				}else if(((struct ipgram*)&eg->data[0])->proto== IPv4_PROTO_UDP){ 
+					if(!isFragmentedPacket(pkt)&&!lookingForFragment){
+						//kprintf("1st case\r\n");
+						udpDaemon(pkt);
+					}
+					else if( (ret_val = fragmentPacketHelper(pkt,frag_pkts)) ==0){
+					//	kprintf("2nd case\r\n");
+						lookingForFragment = 0;
+						udpDaemon(frag_pkts);
+						bzero(frag_pkts, MAX_ETH_LEN);
+					}else if(ret_val == 1){
+					//	kprintf("3rd case\r\n");
+						lookingForFragment = 1;
+					}else{ //SYSERR = ret_val ... different datagram or something else
+						
+					//	kprintf("4th case\r\n");
+						bzero(frag_pkts, MAX_ETH_LEN);
+						lookingForFragment = 0;
+						continue;
+					}
 				}
-				else if( (ret_val = fragmentPacketHelper(pkt,frag_pkts)) ==0){
-				//	kprintf("2nd case\r\n");
-					lookingForFragment = 0;
-					icmpDaemon(frag_pkts,1);
-					bzero(frag_pkts, MAX_ETH_LEN);
-				}else if(ret_val == 1){
-				//	kprintf("3rd case\r\n");
-					lookingForFragment = 1;
-				}else{ //SYSERR = ret_val ... different datagram or something else
-					
-				//	kprintf("4th case\r\n");
-					bzero(frag_pkts, MAX_ETH_LEN);
-					lookingForFragment = 0;
-					continue;
-				}
-
 					
 				//send(icmpId, 1);
 				//resched();

@@ -8,11 +8,14 @@
 #include <xinu.h>
 #include <arp.h>
 #include <icmp.h>
+#include <udp.h>
 
 int arpDaemonId;
 int icmpDaemonId;
 int netRecvId;
 uchar* myipaddr;
+
+struct udpTable* udpGlobalTable;
 /*
  * Initialize network interface.
  */
@@ -20,11 +23,12 @@ void netInit(void)
 {
 	myipaddr = malloc(IPv4_ADDR_LEN);	
 	uchar *mac = malloc(ETH_ADDR_LEN);
-
+	udpGlobalTable = malloc(sizeof(struct udpTable));
 	open(ETH0);
 	//arpDaemonId = create((void *)arpDaemon, INITSTK, 3, "ARP_DAEMON", 0);
 	//icmpDaemonId = create((void *)icmpDaemon, INITSTK, 3, "ICMP_DAEMON", 0);
 	netRecvId = create((void *)netRecv, INITSTK, 3, "NET_RECV_DAEMON", 2, arpDaemonId, icmpDaemonId);
+
 	arpDaemonId = netRecvId;
 	icmpDaemonId = netRecvId;
 	//control(ETH0, ETH_CTRL_GET_MAC, (long) mac, 0);

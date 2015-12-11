@@ -29,3 +29,4 @@ extern int icmpDaemonId;
 void printPacketICMP(uchar *);
 command ping(uchar *, ushort,int);
 syscall icmpDaemon(uchar[], uchar);
+void printAddr(uchar *,ushort);

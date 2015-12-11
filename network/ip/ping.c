@@ -10,7 +10,6 @@
 //uchar packetPING[PKTSZ];
 //uchar *packetPING;
 //uchar *macOther;
-void printAddr(uchar *,ushort);
 
 /**
  * pings another ip address
