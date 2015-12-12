@@ -10,6 +10,8 @@
 /* Prototypes for shell commands defined in other files. */
 command xsh_arp(int, char *[]);
 command xsh_ping(int, char *[]);
+command xsh_udpstat(int, char *[]);
+command xsh_echo(int, char *[]);
 command xsh_clear(int, char *[]);
 command xsh_ethstat(int, char *[]);
 command xsh_exit(int, char *[]);
@@ -23,6 +25,8 @@ command xsh_test(int, char *[]);
 struct centry commandtab[] = {
 	 {"arp", FALSE, xsh_arp},
 	 {"ping", FALSE, xsh_ping},
+	 {"udpstat", FALSE, xsh_udpstat},
+	 {"echo", FALSE, xsh_echo},
     {"clear", TRUE, xsh_clear},
     {"ethstat", FALSE, xsh_ethstat},
     {"exit", TRUE, xsh_exit},

@@ -1,5 +1,6 @@
 #include <xinu.h>
 #include <arp.h>
+#include <udp.h>
 #include <icmp.h>
 
 void netRecv(int arpId, int icmpId) {
@@ -11,7 +12,13 @@ void netRecv(int arpId, int icmpId) {
 	bzero(frag_pkts, MAX_ETH_LEN);
 	int lookingForFragment = 0;
 	ushort ret_val;
+	uchar count = 0;
 	while (1) {
+		if (count > 0) {
+			socketDaemon();
+			count = 0;
+		}
+		count++;
 		bzero(pkt, PKTSZ);
 		read(ETH0, pkt, PKTSZ);
 		eg = (struct ethergram *)pkt;
@@ -28,6 +35,7 @@ void netRecv(int arpId, int icmpId) {
 				break;
 			case ETYPE_IPv4:
 				//using ICMP protocol
+				//printPacketICMP(pkt);
 				if(((struct ipgram*)&eg->data[0])->proto== IPv4_PROTO_ICMP){
 					if(!isFragmentedPacket(pkt)&&!lookingForFragment){
 						//kprintf("1st case\r\n");

@@ -13,21 +13,29 @@
 int arpDaemonId;
 int icmpDaemonId;
 int netRecvId;
+int socketDaemonId;
 uchar* myipaddr;
 
-struct udpTable* udpGlobalTable;
+struct udpSocketTable* udpGlobalTable;
+//semaphore semSockTab;
 /*
  * Initialize network interface.
  */
 void netInit(void)
 {
+	enable();
 	myipaddr = malloc(IPv4_ADDR_LEN);	
 	uchar *mac = malloc(ETH_ADDR_LEN);
-	udpGlobalTable = malloc(sizeof(struct udpTable));
+	udpGlobalTable = malloc(sizeof(struct udpSocketTable));
+	bzero(udpGlobalTable->sockets,MAX_SOCKETS);
+	udpGlobalTable->size = 0;
+	//semSockTab = semcreate(1);
+
 	open(ETH0);
 	//arpDaemonId = create((void *)arpDaemon, INITSTK, 3, "ARP_DAEMON", 0);
 	//icmpDaemonId = create((void *)icmpDaemon, INITSTK, 3, "ICMP_DAEMON", 0);
 	netRecvId = create((void *)netRecv, INITSTK, 3, "NET_RECV_DAEMON", 2, arpDaemonId, icmpDaemonId);
+	//socketDaemonId = create((void *)socketDaemon, INITSTK, 4, "SOCKET_DAEMON", 2, udpGlobalTable, semSockTab);
 
 	arpDaemonId = netRecvId;
 	icmpDaemonId = netRecvId;
@@ -44,6 +52,7 @@ void netInit(void)
 	dot2ip(nvramGet("lan_ipaddr\0"), myipaddr);
 printf("IP Address is: %u.%u.%u.%u\r\n", myipaddr[0], myipaddr[1], myipaddr[2], myipaddr[3]);
 
+	//ready(socketDaemonId, 1);
 	ready(netRecvId, 1);
 	//ready(arpDaemonId, 0); /* Starts an ARP Daemon for the backend. */
 	//ready(icmpDaemonId, 1);

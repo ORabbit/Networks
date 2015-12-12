@@ -33,7 +33,7 @@ syscall icmpDaemon(uchar packetICMP[], uchar wasFragmented)
 
 		//not for us
 		if(memcmp(ipPkt->dst,myipaddr,IPv4_ADDR_LEN)!=0) return SYSERR;
-		if(!wasFragmented && (ntohs(ipPkt->len) < (IPv4_MIN_IHL * 4) 	|| (ip_ihl > IPv4_MAX_IHL))) return SYSERR;
+		//if(!wasFragmented && (ntohs(ipPkt->len) < (IPv4_MIN_IHL * 4) 	|| (ip_ihl > IPv4_MAX_IHL))) return SYSERR;
 
 		if (ntohs(eg->type)!=ETYPE_IPv4 || ipPkt->proto != IPv4_PROTO_ICMP  
 			|| ((ipPkt->ver_ihl & IPv4_VER) >> 4) != IPv4_VERSION || (ip_ihl < IPv4_MIN_IHL) 

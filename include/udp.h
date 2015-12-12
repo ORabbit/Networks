@@ -1,10 +1,9 @@
-#include "network.h"
 #define MAX_QUEUE_SIZE 30
 #define UDP_SOCK_OPEN 1
 #define UDP_HDR_LEN 8
 #define MAX_SOCKETS 10
 struct udpSocketTable{
-	udpSocket sockets[MAX_SOCKETS];
+	struct udpSocket* sockets[MAX_SOCKETS];
 	uchar size;
 };
 struct udpSocket{
@@ -13,7 +12,7 @@ struct udpSocket{
 	uchar local_ip[IP_ADDR_LEN];	
 	ushort remote_port;	
 	ushort local_port;	
-	struct cqueue packets;
+	struct cqueue* packets;
 };
 struct userDataGram{
 	ushort src_port;
@@ -28,9 +27,14 @@ struct cqueue{
 	uchar size;
 	uchar* cqueue_arr[MAX_QUEUE_SIZE];
 };
-int udpOpen(struct udpSocket*);
-void udpWrite(struct udpSocket*,void*);
+int udpOpen(struct udpSocket*,uchar*,ushort);
+void udpWrite(struct udpSocket*,void*,unsigned int);
 void* udpRead(struct udpSocket*);
-uchar* dequeue(struct cqueue);
-syscall enqueue(struct cqueue,uchar*);
-extern struct udpTable* udpGlobalTable;
+syscall udpDaemon(uchar*);
+uchar* cdequeue(struct cqueue*);
+syscall cenqueue(struct cqueue*,uchar*);
+void socketDaemon(void);//(struct udpSocketTable*,semaphore);
+command echo(uchar*,ushort,char[]);
+void printPacketUDP(uchar*);
+extern struct udpSocketTable* udpGlobalTable;
+//extern semaphore semSockTab;

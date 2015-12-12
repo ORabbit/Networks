@@ -18,24 +18,26 @@
  */
 command xsh_udpstat(int nargs, char *args[])
 {
-	if (nargs != 0) {
-		printf("ERROR:Invalid arguments\n udpstat takes no arguments.");
+	if (nargs != 1) {
+		printf("ERROR:Invalid arguments\n udpstat takes no arguments.\n");
 		return SYSERR;
 	}
-	printf("Opened UDP Sockets:\r\n");	
+	kprintf("Opened UDP Sockets:\r\n");	
 	int i;
-	for(i=0;udpGlobalTable->size;i++){
-		if(udpGlobalTable->sockets[i].state==UDP_SOCK_OPEN){
+	//wait(semSockTab);
+	for(i=0;i<udpGlobalTable->size;i++){
+		if(udpGlobalTable->sockets[i]!=0&&udpGlobalTable->sockets[i]->state==UDP_SOCK_OPEN){
 			
-			printf("Socket %d:",i);
-			printf("remote ip: ");
-			printAddr(udpGlobalTable->sockets[i].remote_ip,IP_ADDR_LEN);
-			printf("local ip: ");
-			printAddr(udpGlobalTable->sockets[i].local_ip,IP_ADDR_LEN);
-			printf("source port: %u", udpGlobalTable->sockets[i].source_port);
-			printf("destination port: %u",udpGlobalTable->sockets[i].destination_port);
-			printf("incoming packets: %u packets",udpGlobalTable->sockets[i].packets.tail-udpGlobalTable->sockets[i].packets.head);
+			kprintf("Socket %d:\r\n",i);
+			kprintf("remote ip: \r\n");
+			printAddr(udpGlobalTable->sockets[i]->remote_ip,IP_ADDR_LEN);
+			kprintf("local ip: \r\n");
+			printAddr(udpGlobalTable->sockets[i]->local_ip,IP_ADDR_LEN);
+			kprintf("source port: %u\r\n", udpGlobalTable->sockets[i]->local_port);
+			kprintf("destination port: %u\r\n",udpGlobalTable->sockets[i]->remote_port);
+			kprintf("incoming packets: %u packets\r\n",udpGlobalTable->sockets[i]->packets->size);
 		}
 	}
+	//signal(semSockTab);
 	return OK;
 }

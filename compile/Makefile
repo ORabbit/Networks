@@ -17,15 +17,17 @@ $(VERBOSE).SILENT:
 #-----------------------------------------------------------------------
 
 # SHELL
-SHLL = xsh_test.c xsh_arp.c xsh_ping.c shell-commands.c
+SHLL = xsh_test.c xsh_arp.c xsh_ping.c xsh_udpstat.c xsh_echo.c shell-commands.c
 NET  = netInit.c netRecv.c netWrite.c
 ARP = arp.c
 IP = ping.c icmp.c ipWrite.c fragmentPacketHelper.c
+UDP = udpOpen.c udpDaemon.c echo.c
 
 SRC =	${SHLL:%.c=../shell/%.c} \
 		${NET:%.c=../network/%.c} \
 		${ARP:%.c=../network/arp/%.c} \
-		${IP:%.c=../network/ip/%.c}
+		${IP:%.c=../network/ip/%.c} \
+		${UDP:%.c=../network/udp/%.c}
 
 KRNOBJ = ${SRC:%.c=%.o}
 
