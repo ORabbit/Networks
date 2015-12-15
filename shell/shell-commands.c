@@ -11,6 +11,7 @@
 command xsh_arp(int, char *[]);
 command xsh_ping(int, char *[]);
 command xsh_udpstat(int, char *[]);
+command xsh_rdate(int, char *[]);
 command xsh_echo(int, char *[]);
 command xsh_clear(int, char *[]);
 command xsh_ethstat(int, char *[]);
@@ -26,6 +27,7 @@ struct centry commandtab[] = {
 	 {"arp", FALSE, xsh_arp},
 	 {"ping", FALSE, xsh_ping},
 	 {"udpstat", FALSE, xsh_udpstat},
+	 {"rdate", FALSE, xsh_rdate},
 	 {"echo", FALSE, xsh_echo},
     {"clear", TRUE, xsh_clear},
     {"ethstat", FALSE, xsh_ethstat},

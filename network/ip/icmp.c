@@ -86,7 +86,7 @@ syscall icmpDaemon(uchar packetICMP[], uchar wasFragmented)
 			ipPkt->chksum = 0;
 			ipPkt->chksum = checksum((uchar*)ipPkt, (ip_ihl * 4));
 
-			//printf("SENDING BACK:\n");
+			printf("SENDING BACK:\n");
 			//printPacketICMP(packetICMP);
 			//kprintf("ipoPkt->len:%u\r\n",htons(ipPkt->len));
 			int size = ETHER_MINPAYLOAD < htons(ipPkt->len) ? htons(ipPkt->len) : ETHER_MINPAYLOAD;

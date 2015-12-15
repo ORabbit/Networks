@@ -17,11 +17,11 @@ $(VERBOSE).SILENT:
 #-----------------------------------------------------------------------
 
 # SHELL
-SHLL = xsh_test.c xsh_arp.c xsh_ping.c xsh_udpstat.c xsh_echo.c shell-commands.c
+SHLL = xsh_test.c xsh_arp.c xsh_ping.c xsh_rdate.c xsh_udpstat.c xsh_echo.c shell-commands.c
 NET  = netInit.c netRecv.c netWrite.c
 ARP = arp.c
 IP = ping.c icmp.c ipWrite.c fragmentPacketHelper.c
-UDP = udpOpen.c udpDaemon.c echo.c
+UDP = udpOpen.c udpDaemon.c echo.c rdate.c
 
 SRC =	${SHLL:%.c=../shell/%.c} \
 		${NET:%.c=../network/%.c} \

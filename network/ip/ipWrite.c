@@ -55,7 +55,11 @@ command ipWrite(uchar *payload, ushort payload_len,ushort ipv4_type, uchar* dst_
 			ipPkt->flags_froff = 1;
 			ipPkt->flags_froff <<= 13;
 		}	
-		ipPkt->flags_froff += (ETH_MTU-SUB_CONSTANT)-((ETH_MTU-SUB_CONSTANT)%8);//(ushort)(((ETH_MTU-SUB_CONSTANT)*i)/8);
+		if(fr_grams==0)
+	   	ipPkt->flags_froff =64;//(ushort)(((ETH_MTU-SUB_CONSTANT)*i)/8);
+		else
+    		ipPkt->flags_froff += (ETH_MTU-SUB_CONSTANT)-((ETH_MTU-SUB_CONSTANT)%8);//(ushort)(((ETH_MTU-SUB_CONSTANT)*i)/8);
+
 		ipPkt->id = id;
 		ipPkt->ttl = (uchar)IPv4_TTL;
 		ipPkt->proto = ipv4_type;

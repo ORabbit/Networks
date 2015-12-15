@@ -6,6 +6,17 @@ struct udpSocketTable{
 	struct udpSocket* sockets[MAX_SOCKETS];
 	uchar size;
 };
+struct checksumUDPHeader{
+	uchar ip_src[IP_ADDR_LEN];
+	uchar ip_dst[IP_ADDR_LEN];
+	ushort proto;
+	ushort total_len;
+	ushort src_port;
+	ushort dst_port;
+	ushort total_len2;
+	ushort checksum;
+	uchar* data[1];
+};
 struct udpSocket{
 	uchar state;
 	uchar remote_ip[IP_ADDR_LEN];	
@@ -34,7 +45,11 @@ syscall udpDaemon(uchar*);
 uchar* cdequeue(struct cqueue*);
 syscall cenqueue(struct cqueue*,uchar*);
 void socketDaemon(void);//(struct udpSocketTable*,semaphore);
-command echo(uchar*,ushort,char[]);
+command echo(uchar*,ushort,char[],ushort);
 void printPacketUDP(uchar*);
+int globTableContains(struct udpSocket*);
+void convertToDate(int);
+command rdate(uchar*,ushort);
+
 extern struct udpSocketTable* udpGlobalTable;
 //extern semaphore semSockTab;

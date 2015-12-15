@@ -36,9 +36,11 @@ void netRecv(int arpId, int icmpId) {
 			case ETYPE_IPv4:
 				//using ICMP protocol
 				//printPacketICMP(pkt);
+				kprintf("proto %u\r\n",((struct ipgram*)&eg->data[0])->proto);
 				if(((struct ipgram*)&eg->data[0])->proto== IPv4_PROTO_ICMP){
+					kprintf("got icmp packet\r\n");
 					if(!isFragmentedPacket(pkt)&&!lookingForFragment){
-						//kprintf("1st case\r\n");
+						kprintf("1st case\r\n");
 						icmpDaemon(pkt,0);
 					}
 					else if( (ret_val = fragmentPacketHelper(pkt,frag_pkts)) ==0){
