@@ -106,8 +106,8 @@ void socketDaemon(void){//(struct udpSocketTable *udpGlobalTable, semaphore semS
 							ipWrite((uchar*)udg, htons(udg->total_len), IPv4_PROTO_UDP, socket->remote_ip, eg->src);
 							kprintf("FINISHED WRITING BACK RDATE\r\n");
 						}else {
-							kprintf("data: %s\r\n",(char*)&udg->data[0]);
-							convertToDate(atoi((char*)&udg->data[0]));					
+							kprintf("data: %u\r\n",ntohs((unsigned int)udg->data));
+							convertToDate(ntohs((unsigned int)udg->data));
 						}
 					
 						break;
