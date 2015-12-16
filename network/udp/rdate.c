@@ -12,7 +12,7 @@ command rdate(uchar *ip, ushort port) {
 
 	kprintf("ABOUT TO WRITE\r\n");
 	udpWrite(socket, "", 0);
-	sleep(1000);
+	//sleep(1000);
 
 	send(icmpDaemonId, -10);
 

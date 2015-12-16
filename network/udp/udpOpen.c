@@ -101,14 +101,15 @@ void socketDaemon(void){//(struct udpSocketTable *udpGlobalTable, semaphore semS
 						break;
 					case 37:
 						kprintf("got rdate in socketDaemon\r\n");
-						if (msg == TIMEOUT) {
-							kprintf("GOING TO WRITE BACK RDATE\r\n");
-							ipWrite((uchar*)udg, htons(udg->total_len), IPv4_PROTO_UDP, socket->remote_ip, eg->src);
-							kprintf("FINISHED WRITING BACK RDATE\r\n");
-						}else {
-							kprintf("data: %u\r\n",ntohs((unsigned int)udg->data));
-							convertToDate(ntohs((unsigned int)udg->data));
-						}
+						//if (msg == TIMEOUT) {
+							//kprintf("GOING TO WRITE BACK RDATE\r\n");
+							//ipWrite((uchar*)udg, htons(udg->total_len), IPv4_PROTO_UDP, socket->remote_ip, eg->src);
+							//kprintf("FINISHED WRITING BACK RDATE\r\n");
+						//}else {
+						unsigned int secs = (unsigned int)udg->data;
+							kprintf("data: %u\r\n",ntohs(secs));
+							convertToDate(ntohs(secs));
+						//}
 					
 						break;
 					default:
@@ -120,6 +121,7 @@ void socketDaemon(void){//(struct udpSocketTable *udpGlobalTable, semaphore semS
 		//resched();
 	//}
 }
+
 
 void convertToDate(int sec) {
 	// Convert seconds since epoch to timestamp
@@ -146,6 +148,7 @@ void convertToDate(int sec) {
 	//strncpy(timestamp[4], secs, strlen(secs));
 	//timestamp[5] = " GMT ";
 	kprintf("GMT, ");
+	kprintf("%s ",days[daysPast%7]);
 	//strncpy(timestamp[6], days[daysPast%7], strlen(days[daysPast%7]));
 	//timestamp[7] = ", ";
 	//strncpy(timestamp[8], months[monthsPast%12], strlen(months[monthsPast%12]));
@@ -153,7 +156,7 @@ void convertToDate(int sec) {
 	//timestamp[9] = " ";
 	//char *dayNum = itoa(daysPast%30);
 	//strncpy(timestamp[10], dayNum, strlen(dayNum));
-	kprintf("%d ",daysPast%30);
+	kprintf("%d ",(1+daysPast)%30);
 	//timestamp[11] = ", ";
 	//char *year = itoa(yearsPast+1900);
 	//strncpy(timestamp[12], year, strlen(year));

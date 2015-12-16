@@ -29,5 +29,7 @@ command xsh_rdate(int nargs, char *args[])
 
 	free(ip);
 
+	sleep(1000);
+
 	return OK;
 }
