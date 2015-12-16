@@ -44,12 +44,11 @@ void* udpRead(struct udpSocket*);
 syscall udpDaemon(uchar*);
 uchar* cdequeue(struct cqueue*);
 syscall cenqueue(struct cqueue*,uchar*);
-void socketDaemon(void);//(struct udpSocketTable*,semaphore);
+void socketDaemon(void);
 command echo(uchar*,ushort,char[],ushort);
 void printPacketUDP(uchar*);
 int globTableContains(struct udpSocket*);
-void convertToDate(int);
+void convertToDate(unsigned int);
 command rdate(uchar*,ushort);
 
 extern struct udpSocketTable* udpGlobalTable;
-//extern semaphore semSockTab;

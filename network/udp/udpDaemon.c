@@ -55,7 +55,7 @@ syscall udpDaemon(uchar packetUDP[])
 	chksumUDPHeader->total_len2=udpPkt->total_len;
 	chksumUDPHeader->checksum=udpPkt->checksum;
 	memcpy(&chksumUDPHeader->data[0],&udpPkt->data[0],udpPkt->total_len-UDP_HDR_LEN);
-		printPacketUDP((uchar*)eg);
+		//printPacketUDP((uchar*)eg);
 		/**if((udpPkt->checksum!=0&&udpPkt->checksum!=~chksumCheck)  &&  checksum((uchar*)chksumUDPHeader, udpPkt->total_len+12) != 0){
 				kprintf("ERROR: udp packet checksum didn't pass check\r\n");
 				return SYSERR;
@@ -63,15 +63,15 @@ syscall udpDaemon(uchar packetUDP[])
 
 		//find what socket packet corresponds to
 		///if it doesn't correspond to a socket drop the packet.
-		kprintf("GOT UDP PACKET ENTIRELY\r\n");
-		printPacketUDP(packetUDP);
+		//kprintf("GOT UDP PACKET ENTIRELY\r\n");
+		//printPacketUDP(packetUDP);
 		int i, hasSock = 0;
 		//wait(semSockTab);
-		kprintf("PAST WAIT\r\n");
+		//kprintf("PAST WAIT\r\n");
 		struct ethergram* eg_2 = malloc(ntohs(ipPkt->len)+ETH_HEADER_LEN);
 	  for(i=0;i<udpGlobalTable->size;i++){
 			//loop through open sockets
-			kprintf("Socket is %u\r\n",udpGlobalTable->sockets[i]);
+			/*kprintf("Socket is %u\r\n",udpGlobalTable->sockets[i]);
 			if(udpGlobalTable->sockets[i]!=0){
 			 kprintf("Socket %d\r\n",i);
 			kprintf("Socket state: %u",udpGlobalTable->sockets[i]->state);
@@ -83,14 +83,13 @@ syscall udpDaemon(uchar packetUDP[])
 			kprintf("destination port: %u\r\n",udpGlobalTable->sockets[i]->remote_port);
 			kprintf("incoming packets: %u packets\r\n",udpGlobalTable->sockets[i]->packets->size);
 			
-		}
+		}*/
 			if(udpGlobalTable->sockets[i]!=0		&&		udpGlobalTable->sockets[i]->state==UDP_SOCK_OPEN 	&&
 				//does packet correspond to packet's source, end ports, and ip addresses.
 			 htons(udpPkt->src_port)==udpGlobalTable->sockets[i]->local_port		&&		htons(udpPkt->dst_port)==udpGlobalTable->sockets[i]->remote_port	&&		
 
 			 memcmp(ipPkt->src,udpGlobalTable->sockets[i]->remote_ip,IP_ADDR_LEN)==0 && memcmp(ipPkt->dst,udpGlobalTable->sockets[i]->local_ip,IP_ADDR_LEN)==0){
 				//add udp packet to circular queue: if queue is full packet is dropped
-				kprintf("ABOUT TO DO SHIT\r\n");
 	  			memcpy(eg_2,eg,ntohs(ipPkt->len)+ETH_HEADER_LEN);
 				cenqueue(udpGlobalTable->sockets[i]->packets,(uchar*)eg_2);
 				hasSock = 1;
@@ -98,18 +97,16 @@ syscall udpDaemon(uchar packetUDP[])
 			}else
 				kprintf("ERROR: didn't pass UDP checks\r\n");
 		}
-	kprintf("wtf is hasSock:%d\r\n",hasSock);
 	if (!hasSock) {
-		kprintf("in !hasSock\r\n");
+		//kprintf("in !hasSock\r\n");
 		struct udpSocket *socket = malloc(sizeof(struct udpSocket));
 		udpOpen(socket, ipPkt->src, htons(udpPkt->dst_port));
-		kprintf("initialized first socket\r\n");
+		//kprintf("initialized first socket\r\n");
 	   memcpy(eg_2,eg,ntohs(ipPkt->len)+ETH_HEADER_LEN);
 		cenqueue(udpGlobalTable->sockets[udpGlobalTable->size-1]->packets, (uchar*)eg_2);
-		kprintf("enqueued new socket\r\n");
+		//kprintf("enqueued new socket\r\n");
 	}
-	//signal(semSockTab);
-	kprintf("FINISHED\r\n");
+	//kprintf("FINISHED\r\n");
 	return OK;
 }
 

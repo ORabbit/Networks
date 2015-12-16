@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 int udpOpen(struct udpSocket* socket, uchar *ip, ushort port){
 	//initialize socket
 	socket->state = UDP_SOCK_OPEN; 
@@ -20,13 +21,11 @@ int udpOpen(struct udpSocket* socket, uchar *ip, ushort port){
 	socket->packets->tail = 0;
 	socket->packets->size = 0;
 	//table is full: return error
-	//wait(semSockTab);
 	if(udpGlobalTable->size>=MAX_SOCKETS){ free(socket); return -1;}
 	if(globTableContains(socket)) { return 0;}
 	//add socket to the table
 	udpGlobalTable->sockets[udpGlobalTable->size]=socket;	
 	udpGlobalTable->size++;
-	//signal(semSockTab);
 	return 0;
 }
 
@@ -57,11 +56,10 @@ void udpWrite(struct udpSocket* socket,void* data,unsigned int len){
 	memcpy(&udg->data[0],data,len);
 	uchar *macDst = malloc(ETH_ADDR_LEN);
 	arpResolve(socket->remote_ip, macDst);
-	kprintf("ABOUT TO CALL ipWrite from udpWrite\r\n");
+	//kprintf("ABOUT TO CALL ipWrite from udpWrite\r\n");
 	ipWrite((void *)udg,htons(udg->total_len),IPv4_PROTO_UDP,socket->remote_ip,macDst);
-
-	//free(udg);
 }
+
 void* udpRead(struct udpSocket* socket){
 	return cdequeue(socket->packets);
 }
@@ -71,97 +69,69 @@ void socketDaemon(void){//(struct udpSocketTable *udpGlobalTable, semaphore semS
 	struct udpSocket *socket;
 	struct userDataGram *udg;
 	struct ethergram *eg;
+	uchar buf[4];
 
-
-	//while (1) {
-		//wait(semSock);
-		kprintf("in socketDaemon\r\n");
+		//kprintf("in socketDaemon\r\n");
 		for (i = 0; i < udpGlobalTable->size; i++) {
-			kprintf("in for of socketDaemon\r\n");
 			if (udpGlobalTable->sockets[i] != 0 
 					&& udpGlobalTable->sockets[i]->state == UDP_SOCK_OPEN
 					&& udpGlobalTable->sockets[i]->packets->size > 0) {
-				kprintf("got packet in socketDaemon\r\n");
+				//kprintf("got packet in socketDaemon\r\n");
 				socket = udpGlobalTable->sockets[i];
 				ushort port = socket->local_port;
 				int msg = recvtime(1 * CLKTICKS_PER_SEC);
 				eg = udpRead(socket);
 				udg = (struct userDataGram*)&(((struct ipgram*)&eg->data[0])->opts[0]);
-				kprintf("got past dequeue in socket daemon\r\n");
+				//kprintf("got past dequeue in socket daemon\r\n");
 				switch (port) {
 					case 7:
-						kprintf("got echo in socketDaemon\r\n");
+						//kprintf("got echo in socketDaemon\r\n");
 						if (msg == TIMEOUT) {
-							kprintf("GOING TO WRITE BACK ECHO\r\n");
+							//kprintf("GOING TO WRITE BACK ECHO\r\n");
 							//printPacketUDP((uchar*)eg);
 							ipWrite((uchar*)udg, htons(udg->total_len), IPv4_PROTO_UDP, socket->remote_ip, eg->src);
-							kprintf("FINISHED WRITING BACK ECHO\r\n");
+							//kprintf("FINISHED WRITING BACK ECHO\r\n");
 						}else
 							kprintf("%s\r\n",(char*)&udg->data[0]);
 						break;
 					case 37:
-						kprintf("got rdate in socketDaemon\r\n");
-						//if (msg == TIMEOUT) {
-							//kprintf("GOING TO WRITE BACK RDATE\r\n");
-							//ipWrite((uchar*)udg, htons(udg->total_len), IPv4_PROTO_UDP, socket->remote_ip, eg->src);
-							//kprintf("FINISHED WRITING BACK RDATE\r\n");
-						//}else {
-						unsigned int secs = (unsigned int)udg->data;
-							kprintf("data: %u\r\n",ntohs(secs));
-							convertToDate(ntohs(secs));
+						//kprintf("got rdate in socketDaemon\r\n");
+						memcpy(buf,udg->data,4);
+						//kprintf("data in buffer: %u\r\n",(buf[0] << 24) + (buf[1] << 16) + (buf[2] << 8) + buf[3]);
+						convertToDate((buf[0] << 24) + (buf[1] << 16) + (buf[2] << 8) + buf[3]);
 						//}
-					
 						break;
 					default:
 						break;
 				}
 			}
 		}
-		//signal(semSock);
-		//resched();
-	//}
 }
 
 
-void convertToDate(int sec) {
+void convertToDate(unsigned int sec) {
 	// Convert seconds since epoch to timestamp
 	//char *timestamp[12];
-	char *months[] = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "November", "Decemeber"};
+	char *months[] = {"January", "February", "March", "April", "May", "June", "July", "August", "September","October", "November", "Decemeber"};
 	char *days[] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
 
 	//	12:00AM Jan 1st, 1900 GMT.
-	int yearsPast = sec / 31556926;
+
+	int yearsPast = sec / 31557600;
 	int monthsPast = sec / 2629743;
 	int weeksPast = sec / 604800;
 	int daysPast = sec / 86400;
 	int hoursPast = sec / 3600;
 	int minsPast = sec / 60;
 
-	//char *hours = itoa(hoursPast%24);
-	//strncpy(timestamp[0], hours, strlen(hours));
-	kprintf("%d:",hoursPast%24);
-	//char *mins = itoa(minsPast%60);
-	//strncpy(timestamp[2], mins, strlen(mins));
-	kprintf("%d:",minsPast%60);
-	//char *secs = itoa(sec%60);
+	kprintf("%d:",(sec/(60*60))%24);
+	kprintf("%d:",(sec/60)%60);
 	kprintf("%d ",sec%60);
-	//strncpy(timestamp[4], secs, strlen(secs));
-	//timestamp[5] = " GMT ";
 	kprintf("GMT, ");
 	kprintf("%s ",days[daysPast%7]);
-	//strncpy(timestamp[6], days[daysPast%7], strlen(days[daysPast%7]));
-	//timestamp[7] = ", ";
-	//strncpy(timestamp[8], months[monthsPast%12], strlen(months[monthsPast%12]));
 	kprintf("%s ",months[monthsPast%12]);
-	//timestamp[9] = " ";
-	//char *dayNum = itoa(daysPast%30);
-	//strncpy(timestamp[10], dayNum, strlen(dayNum));
-	kprintf("%d ",(1+daysPast)%30);
-	//timestamp[11] = ", ";
-	//char *year = itoa(yearsPast+1900);
-	//strncpy(timestamp[12], year, strlen(year));
-
-	kprintf("%d \r\n",yearsPast+1900);
+	kprintf("%d ",daysPast%28);
+	kprintf("%d \r\n",yearsPast+1900);	
 }
 
 uchar* cdequeue(struct cqueue* cQueue){

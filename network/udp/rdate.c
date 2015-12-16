@@ -10,7 +10,7 @@ command rdate(uchar *ip, ushort port) {
 	socket = malloc(sizeof(struct udpSocket));
 	if (-1 == udpOpen(socket, ip, port)) return SYSERR;
 
-	kprintf("ABOUT TO WRITE\r\n");
+	//kprintf("ABOUT TO WRITE\r\n");
 	udpWrite(socket, "", 0);
 	//sleep(1000);
 

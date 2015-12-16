@@ -22,7 +22,7 @@ command xsh_rdate(int nargs, char *args[])
 	uchar *ip = malloc(IP_ADDR_LEN);
 	dot2ip(args[1], ip);
 
-	printf("Getting date\n");
+	//printf("Getting date\n");
 
 	if (SYSERR == rdate(ip, 37))
 		printf("ERROR: could not complete rdate\n");

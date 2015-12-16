@@ -253,7 +253,7 @@ void arpResolveHelper(uchar *packet, int prevId)
 		resched();
 		send(arpDaemonId, currpid);
 		didTimeout=recvMacAddressTime(mac,1);
-		kprintf("(%d) Trying to resolve ip address.\r\n",i+1);
+		//kprintf("(%d) Trying to resolve ip address.\r\n",i+1);
    }
 	if(didTimeout==TIMEOUT){
 		send(prevId, err);//tell the process the mac is wrong

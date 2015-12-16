@@ -32,7 +32,7 @@ command netWrite(uchar *payload, ushort payload_len,ushort e_type, uchar* mac)
 
 	ushort size = ETHER_MINPAYLOAD < payload_len ? payload_len : ETHER_MINPAYLOAD;
 	//printPacketICMP(packet);
-	printPacketUDP(packet);
+	//printPacketUDP(packet);
 	write(ETH0, packet,ETHER_SIZE+size);
 
 	return OK;
